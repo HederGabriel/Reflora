@@ -1,130 +1,69 @@
+import os
+import json
 from ecossistema import Ecossistema
-from interface import exibir_quantitativo, decisao_usuario, capturar_tecla_numerica, aguardar_enter, exibir_historico, \
-    limpar_console
 
-historico_jogo = []
+SAVE_FILE = "reflora_save.json"
 
 
-def adicionar_ao_historico(ecossistema):
-    historico_jogo.append(
-        f"Ano: {ecossistema.ano}, Mês: {ecossistema.mes}\n"
-        f"Plantas: {ecossistema.plantas}\n"
-        f"Herbívoros: {sum(animal.quantidade for animal in ecossistema.herbivoros.values())}\n"
-        f"Carnívoros: {sum(animal.quantidade for animal in ecossistema.carnivoros.values())}\n"
-    )
+class SistemaJogo:
+    def __init__(self):
+        self.ecossistema = None
+        self.historico_jogo = []
 
+    def escolher_bioma(self, i):
+        biomas = ["Amazônia", "Cerrado", "Pantanal", "Caatinga"]
+        return biomas[i - 1]
 
-def escolher_bioma():
-    while True:
-        limpar_console()
-        print("Escolha um bioma:")
-        print("1. Amazônia")
-        print("2. Cerrado")
-        print("3. Pantanal")
-        print("4. Caatinga")
-        print("Escolha um bioma (1-4): ", end="", flush=True)
-        bioma = capturar_tecla_numerica()
-        if bioma in [1, 2, 3, 4]:
-            return ["Amazônia", "Cerrado", "Pantanal", "Caatinga"][bioma - 1]
-        else:
-            print("\nOpção inválida, tente novamente.")
-            aguardar_enter()
+    def confirmar_bioma(self, bioma):
+        self.ecossistema = Ecossistema(bioma)
 
+    def adicionar_ao_historico(self):
+        e = self.ecossistema
+        texto = (
+            f"Ano {e.ano}, Mês {e.mes} | "
+            f"Plantas {e.plantas} | "
+            f"Herbívoros {sum(h.quantidade for h in e.herbivoros.values())} | "
+            f"Carnívoros {sum(c.quantidade for c in e.carnivoros.values())}"
+        )
+        self.historico_jogo.append(texto)
 
-def confirmar_bioma(bioma):
-    while True:  # Loop até que o usuário escolha 1 ou 2
-        limpar_console()
-        ecossistema = Ecossistema(bioma)
-        print(f"Bioma selecionado: {bioma}")
-        print(f"Quantidade inicial de plantas: {ecossistema.plantas}")
-        print("Herbívoros:")
-        for nome, animal in ecossistema.herbivoros.items():
-            print(f"  {nome}: {animal.quantidade}")
-        print("Carnívoros:")
-        for nome, animal in ecossistema.carnivoros.items():
-            print(f"  {nome}: {animal.quantidade}")
-        print("Confirmar bioma? (1 - Sim, 2 - Não): ", end="", flush=True)
-        confirmar = capturar_tecla_numerica()
+    def salvar(self):
+        if not self.ecossistema:
+            return
+        e = self.ecossistema
+        data = {
+            "bioma": e.bioma,
+            "ano": e.ano,
+            "mes": e.mes,
+            "plantas": e.plantas,
+            "herbivoros": {n: h.quantidade for n, h in e.herbivoros.items()},
+            "carnivoros": {n: c.quantidade for n, c in e.carnivoros.items()},
+            "historico": self.historico_jogo,
+        }
+        with open(SAVE_FILE, "w") as f:
+            json.dump(data, f)
 
-        if confirmar in [1, 2]:  # Verifica se a opção é válida
-            return ecossistema if confirmar == 1 else None
-        else:
-            print("\nOpção inválida. Digite 1 para Sim ou 2 para Não.")
-            aguardar_enter("\nPressione Enter para tentar novamente...")
+    def carregar(self):
+        if not os.path.exists(SAVE_FILE):
+            return False
 
+        with open(SAVE_FILE, "r") as f:
+            data = json.load(f)
 
-def verificar_continuacao(ecossistema):
-    if ecossistema.ano % 5 == 0 and ecossistema.mes == 1:
-        print(f"\nO jogo atingiu {ecossistema.ano} anos. Deseja continuar?")
-        print("1. Sim")
-        print("2. Não")
-        print("Escolha uma opção (1-2): ", end="", flush=True)
-        opcao = capturar_tecla_numerica()
-        return opcao == 1
-    return True
+        self.ecossistema = Ecossistema(data["bioma"])
+        e = self.ecossistema
 
+        e.ano = data["ano"]
+        e.mes = data["mes"]
+        e.plantas = data["plantas"]
 
-def iniciar_jogo():
-    while True:
-        bioma = escolher_bioma()
-        ecossistema = confirmar_bioma(bioma)
-        if ecossistema:
-            break
+        for n, q in data["herbivoros"].items():
+            if n in e.herbivoros:
+                e.herbivoros[n].quantidade = q
 
-    while True:
-        exibir_quantitativo(ecossistema)
-        adicionar_ao_historico(ecossistema)
+        for n, q in data["carnivoros"].items():
+            if n in e.carnivoros:
+                e.carnivoros[n].quantidade = q
 
-        if all(animal.quantidade == 0 for animal in ecossistema.herbivoros.values()) and \
-                all(animal.quantidade == 0 for animal in ecossistema.carnivoros.values()):
-            print("\nTodos os animais foram extintos. Fim de Jogo.")
-            break
-
-        if ecossistema.plantas == 0:
-            print("\nTodas as plantas morreram. Fim de Jogo.")
-            break
-
-        if not verificar_continuacao(ecossistema):
-            break
-
-        if decisao_usuario(ecossistema):
-            ecossistema.simular_mes()
-
-    while True:
-        print("\nDeseja ver o histórico do jogo?")
-        print("1. Sim")
-        print("2. Não")
-        print("Escolha uma opção (1-2): ", end="", flush=True)
-        opcao_historico = capturar_tecla_numerica()
-
-        if opcao_historico == 1:
-            exibir_historico(historico_jogo)
-            break
-        elif opcao_historico == 2:
-            break
-        else:
-            print("\nOpção inválida. Digite 1 para Sim ou 2 para Não.")
-            aguardar_enter("\nPressione Enter para tentar novamente...")
-            limpar_console()
-
-
-def verificar_reiniciar():
-    while True:  # Loop até que o usuário escolha uma opção válida
-        limpar_console()
-        print("\nDeseja jogar novamente?")
-        print("1. Sim")
-        print("2. Não")
-        print("Escolha uma opção (1-2): ", end="", flush=True)
-        escolha = capturar_tecla_numerica()
-
-        if escolha == 1:
-            historico_jogo.clear()
-            limpar_console()
-            return True
-        elif escolha == 2:
-            limpar_console()
-            print("Obrigado por jogar! Até a próxima!")
-            exit()
-        else:
-            print("\nOpção inválida. Digite 1 para Sim ou 2 para Não.")
-            aguardar_enter("\nPressione Enter para tentar novamente...")
+        self.historico_jogo = data["historico"]
+        return True

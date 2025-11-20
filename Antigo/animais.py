@@ -1,5 +1,6 @@
 import random
 
+
 class Animal:
     def __init__(self, nome, quantidade, consumo):
         self.nome = nome
@@ -23,11 +24,11 @@ class Herbivoro(Animal):
 
     def reproduzir(self):
         pares = self.quantidade // 2
-        novos = 0
+        novos_individuos = 0
         for _ in range(pares):
             if random.random() <= 0.4:
-                novos += random.randint(1, 3)
-        self.quantidade += novos
+                novos_individuos += random.randint(1, 3)
+        self.quantidade += novos_individuos
 
     def envelhecer(self):
         self.quantidade = max(0, self.quantidade - random.randint(0, 1))
@@ -40,11 +41,11 @@ class Carnivoro(Animal):
 
     def reproduzir(self):
         pares = self.quantidade // 2
-        novos = 0
+        novos_individuos = 0
         for _ in range(pares):
             if random.random() <= 0.2:
-                novos += 1
-        self.quantidade += novos
+                novos_individuos += 1
+        self.quantidade += novos_individuos
 
     def envelhecer(self):
         self.quantidade = max(0, self.quantidade - random.randint(0, 1))
