@@ -2,13 +2,11 @@ import os
 import json
 from ecossistema import Ecossistema
 
-SAVE_FILE = "reflora_save.json"
-
-
 class SistemaJogo:
     def __init__(self):
         self.ecossistema = None
         self.historico_jogo = []
+        self.current_save_file = None  # Arquivo de save atual
 
     def escolher_bioma(self, i):
         biomas = ["Amazônia", "Cerrado", "Pantanal", "Caatinga"]
@@ -27,9 +25,11 @@ class SistemaJogo:
         )
         self.historico_jogo.append(texto)
 
-    def salvar(self):
+    # ------------------- SALVAR COM SUBSTITUIÇÃO -------------------
+    def salvar(self, arquivo=None):
         if not self.ecossistema:
             return
+
         e = self.ecossistema
         data = {
             "bioma": e.bioma,
@@ -40,19 +40,40 @@ class SistemaJogo:
             "carnivoros": {n: c.quantidade for n, c in e.carnivoros.items()},
             "historico": self.historico_jogo,
         }
-        with open(SAVE_FILE, "w") as f:
-            json.dump(data, f)
 
-    def carregar(self):
-        if not os.path.exists(SAVE_FILE):
+        # Se arquivo externo for passado, sobrescreve
+        if arquivo:
+            destino = arquivo
+        # Se já carregou um save, sobrescreve o mesmo
+        elif self.current_save_file:
+            destino = self.current_save_file
+        else:
+            # Novo save
+            saves = [f for f in os.listdir() if f.startswith("save") and f.endswith(".json")]
+            if len(saves) >= 3:
+                print("Limite de 3 saves atingido! Apague algum save existente.")
+                return
+            idx = 1
+            while os.path.exists(f"save{idx}.json"):
+                idx += 1
+            destino = f"save{idx}.json"
+            self.current_save_file = destino
+
+        with open(destino, "w") as f:
+            json.dump(data, f, indent=4)
+        print(f"Jogo salvo em {destino}")
+        self.current_save_file = destino  # garante que o save atual está atualizado
+
+    # ------------------- CARREGAR SAVE -------------------
+    def carregar(self, arquivo=None):
+        if not arquivo or not os.path.exists(arquivo):
             return False
 
-        with open(SAVE_FILE, "r") as f:
+        with open(arquivo, "r") as f:
             data = json.load(f)
 
         self.ecossistema = Ecossistema(data["bioma"])
         e = self.ecossistema
-
         e.ano = data["ano"]
         e.mes = data["mes"]
         e.plantas = data["plantas"]
@@ -65,5 +86,6 @@ class SistemaJogo:
             if n in e.carnivoros:
                 e.carnivoros[n].quantidade = q
 
-        self.historico_jogo = data["historico"]
+        self.historico_jogo = data.get("historico", [])
+        self.current_save_file = arquivo  # marca o save carregado como atual
         return True

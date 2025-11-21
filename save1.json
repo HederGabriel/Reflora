@@ -1,0 +1,21 @@
+{
+    "bioma": "Amaz\u00f4nia",
+    "ano": 1,
+    "mes": 4,
+    "plantas": 0,
+    "herbivoros": {
+        "Pregui\u00e7a": 12,
+        "Anta": 180,
+        "Capivara": 125
+    },
+    "carnivoros": {
+        "On\u00e7a-pintada": 2,
+        "Jacar\u00e9-a\u00e7u": 5,
+        "Harpia": 4
+    },
+    "historico": [
+        "Ano 1, M\u00eas 1 | Plantas 500 | Herb\u00edvoros 126 | Carn\u00edvoros 14",
+        "Ano 1, M\u00eas 2 | Plantas 428 | Herb\u00edvoros 138 | Carn\u00edvoros 14",
+        "Ano 1, M\u00eas 3 | Plantas 266 | Herb\u00edvoros 252 | Carn\u00edvoros 12"
+    ]
+}
