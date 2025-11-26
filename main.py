@@ -20,8 +20,12 @@ sistema = SistemaJogo()
 estado = "menu"
 bioma_selecionado = None
 buttons_saves = []
-button_voltar_saves = Button((SCREEN_W // 2 - 60, 550, 120, 50), "Voltar", FONT, callback=lambda: mudar_estado("menu"))
+alerta_saves = False  # estado de alerta de saves
+alerta_salvo = False  # estado de alerta de jogo salvo
+tempo_alerta_salvo = 0
+TEMPO_ALERTA = 2  # segundos que a mensagem "Jogo salvo!" vai aparecer
 
+button_voltar_saves = Button((SCREEN_W // 2 - 60, 550, 120, 50), "Voltar", FONT, callback=lambda: mudar_estado("menu"))
 
 # --- CALLBACKS ---
 def mudar_estado(e):
@@ -29,8 +33,8 @@ def mudar_estado(e):
     estado = e
 
 def ha_saves():
-    # verifica se existe pelo menos um saveX.json
-    return any(f.startswith("save") and f.endswith(".json") for f in os.listdir() if os.path.isfile(f))
+    saves = [f for f in os.listdir() if f.startswith("save") and f.endswith(".json")]
+    return bool(saves)
 
 def escolher_bioma(i):
     global bioma_selecionado, estado
@@ -45,36 +49,32 @@ def carregar_jogo():
     if sistema.carregar():
         mudar_estado("jogo")
 
+# --- ABRIR LISTA DE SAVES ---
 def abrir_lista_saves():
-    global estado, buttons_saves
+    global estado, buttons_saves, alerta_saves
     saves = [f for f in os.listdir() if f.startswith("save") and f.endswith(".json")]
-    if not saves:
-        return
-
-    # Limita até 3 saves
-    saves = saves[:3]
-
     buttons_saves = []
 
-    # Centraliza verticalmente na tela
-    bloco_altura = 90
-    bloco_largura = 400
-    spacing = 30
-    total_height = len(saves) * (bloco_altura + spacing) - spacing
-    start_y = (SCREEN_H - total_height) // 2
+    alerta_saves = False  # resetando alerta
 
-    for idx, arquivo in enumerate(saves):
-        nome = arquivo
-        bloco_x = (SCREEN_W - bloco_largura) // 2
-        bloco_y = start_y + idx * (bloco_altura + spacing)
+    if saves:
+        saves = saves[:3]
+        bloco_altura = 90
+        bloco_largura = 400
+        spacing = 30
+        total_height = len(saves) * (bloco_altura + spacing) - spacing
+        start_y = (SCREEN_H - total_height) // 2
 
-        # Botões Carregar e Apagar dentro do bloco
-        btn_load = Button((bloco_x + 40, bloco_y + 50, 150, 40), "Carregar", FONT, callback=lambda a=arquivo: carregar_save(a))
-        btn_del = Button((bloco_x + 220, bloco_y + 50, 150, 40), "Apagar", FONT, callback=lambda a=arquivo: apagar_save(a))
+        for idx, arquivo in enumerate(saves):
+            bloco_x = (SCREEN_W - bloco_largura) // 2
+            bloco_y = start_y + idx * (bloco_altura + spacing)
+            btn_load = Button((bloco_x + 40, bloco_y + 50, 150, 40), "Carregar", FONT, callback=lambda a=arquivo: carregar_save(a))
+            btn_del = Button((bloco_x + 220, bloco_y + 50, 150, 40), "Apagar", FONT, callback=lambda a=arquivo: apagar_save(a))
+            buttons_saves.append((btn_load, btn_del, arquivo, bloco_x, bloco_y))
+    else:
+        alerta_saves = True  # indica que não há saves
 
-        buttons_saves.append((btn_load, btn_del, nome, bloco_x, bloco_y))
-
-    estado = "lista_saves"
+    estado = "lista_saves"  # sempre vai para a tela de saves
 
 def carregar_save(arq):
     if sistema.carregar(arq):
@@ -86,13 +86,10 @@ def apagar_save(arq):
     mudar_estado("menu")
 
 def salvar_jogo():
-    """
-    Salva o jogo atual.
-    Se carregou um save, sobrescreve.
-    Se não, cria novo save, respeitando limite de 3.
-    """
+    global alerta_salvo, tempo_alerta_salvo
     sistema.salvar()
-
+    alerta_salvo = True
+    tempo_alerta_salvo = pygame.time.get_ticks()  # marca o momento do save
 
 # --- BOTÕES MENU ---
 btn_carregar = Button((SCREEN_W // 2 - 120, 290, 240, 50), "Carregar", BIG, callback=abrir_lista_saves)
@@ -116,9 +113,9 @@ y_biomas = 300
 
 for i, lbl in enumerate(labels, start=1):
     x = start_x + (i - 1) * (button_width + spacing)
-    buttons_bioma.append(
-        Button((x, y_biomas, button_width, button_height), lbl, FONT, callback=lambda x=i: escolher_bioma(x))
-    )
+    buttons_bioma.append(Button((x, y_biomas, button_width, button_height), lbl, FONT, callback=lambda x=i: escolher_bioma(x)))
+
+button_cancelar_bioma = Button((SCREEN_W // 2 - 100, 500, 200, 50), "Cancelar", BIG, callback=lambda: mudar_estado("menu"))
 
 # --- DESCRIÇÕES DOS BIOMAS ---
 desc_biomas = {
@@ -128,25 +125,15 @@ desc_biomas = {
     4: ["Caatinga", "• Bioma semiárido", "• Vegetação resistente à seca", "• Animais adaptados ao calor extremo"],
 }
 
-# Botões SIM / NÃO na confirmação
 button_sim = Button((SCREEN_W//2 - 140, 500, 120, 50), "SIM", BIG, callback=confirmar_bioma_final)
 button_nao = Button((SCREEN_W//2 + 20, 500, 120, 50), "NÃO", BIG, callback=lambda: mudar_estado("selec_bioma"))
-
-# Botão sair do jogo (sempre visível no canto superior direito)
 button_sair_jogo = Button((SCREEN_W - 120, 20, 100, 40), "Sair", FONT, callback=lambda: mudar_estado("menu"))
 
-# ------------------ DESENHAR TELAS ------------------
+# --- DESENHAR TELAS ---
 def draw_menu():
     screen.fill((120, 200, 255))
     centered_text(screen, "REFLORA", BIG, 120)
-    if not ha_saves():
-        btn_carregar.color_idle = (80, 80, 80)
-        btn_carregar.color_hover = (80, 80, 80)
-        btn_carregar.callback = None
-    else:
-        btn_carregar.color_idle = (200, 200, 200)
-        btn_carregar.color_hover = (230, 230, 230)
-        btn_carregar.callback = abrir_lista_saves
+    
     for b in buttons_menu:
         b.draw(screen)
 
@@ -155,6 +142,7 @@ def draw_selec_bioma():
     centered_text(screen, "Escolha um bioma", BIG, 100)
     for b in buttons_bioma:
         b.draw(screen)
+    button_cancelar_bioma.draw(screen)
 
 def draw_confirma_bioma():
     screen.fill((200, 240, 200))
@@ -171,33 +159,32 @@ def draw_lista_saves():
     screen.fill((150, 180, 200))
     centered_text(screen, "Saves Encontrados", BIG, 100)
 
+    if not buttons_saves:
+        aviso = FONT.render("Você não tem nenhum save.", True, (255, 0, 0))
+        screen.blit(aviso, (SCREEN_W//2 - aviso.get_width()//2, SCREEN_H//2 - 20))
+        button_voltar_saves.rect.topleft = (SCREEN_W // 2 - 60, SCREEN_H//2 + 20)
+        button_voltar_saves.draw(screen)
+        return
+
     for load, delete, nome, bloco_x, bloco_y in buttons_saves:
-        # Bloco de fundo
         bloco_altura = 90
         bloco_largura = 400
         pygame.draw.rect(screen, (200, 200, 200), (bloco_x, bloco_y, bloco_largura, bloco_altura), border_radius=8)
-
-        # Nome do save (sem ".json") centralizado
         nome_limpo = nome.replace(".json", "")
         t = FONT.render(nome_limpo, True, (0, 0, 0))
         screen.blit(t, t.get_rect(center=(bloco_x + bloco_largura // 2, bloco_y + 20)))
-
-        # Ajusta posição dos botões
         load.rect.topleft = (bloco_x + 40, bloco_y + 50)
         delete.rect.topleft = (bloco_x + 220, bloco_y + 50)
-
-        # Desenha os botões
         load.draw(screen)
         delete.draw(screen)
 
-    # Botão voltar centralizado abaixo dos blocos
-    button_voltar_saves.rect.topleft = (SCREEN_W // 2 - 60, bloco_y + bloco_altura + 40)
+    button_voltar_saves.rect.topleft = (SCREEN_W // 2 - 60, bloco_y + bloco_altura + 40 if buttons_saves else SCREEN_H//2 + 40)
     button_voltar_saves.draw(screen)
 
 def draw_jogo():
+    global alerta_salvo
     e = sistema.ecossistema
     screen.fill((220, 255, 220))
-
     pygame.draw.rect(screen, (240, 240, 240), (0, 0, SCREEN_W, 80))
     centered_text(screen, f"{e.bioma} — Ano {e.ano} Mês {e.mes}", FONT, 30)
     centered_text(screen,
@@ -223,6 +210,15 @@ def draw_jogo():
         screen.blit(FONT.render(f"C - {nome}: {a.quantidade}", True, (0, 0, 0)), (360, y))
         y += 26
 
+    # --- ALERTA DE JOGO SALVO ---
+    if alerta_salvo:
+        agora = pygame.time.get_ticks()
+        if (agora - tempo_alerta_salvo) / 1000 < TEMPO_ALERTA:
+            msg = BIG.render("Jogo salvo!", True, (0, 200, 0))
+            screen.blit(msg, ((SCREEN_W - msg.get_width()) // 2, 580))
+        else:
+            alerta_salvo = False
+
     button_sair_jogo.draw(screen)
     return rects
 
@@ -232,73 +228,51 @@ while running:
     for ev in pygame.event.get():
         if ev.type == pygame.QUIT:
             running = False
-
-        elif ev.type == pygame.MOUSEMOTION:
+        elif ev.type in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONDOWN):
             if estado == "selec_bioma":
-                for b in buttons_bioma:
-                    b.handle_event(ev)
+                for b in buttons_bioma: b.handle_event(ev)
+                button_cancelar_bioma.handle_event(ev)
             elif estado == "confirma_bioma":
                 button_sim.handle_event(ev)
                 button_nao.handle_event(ev)
             elif estado == "lista_saves":
-                for save_data in buttons_saves:  # percorre todos os saves
-                    load, delete, _, _, _ = save_data
+                for load, delete, nome, x, y in buttons_saves:
                     load.handle_event(ev)
                     delete.handle_event(ev)
-                button_voltar_saves.handle_event(ev)  # trata o botão voltar
-            elif estado == "menu":
-                for b in buttons_menu:
-                    b.handle_event(ev)
-            elif estado == "jogo":
-                for r, _ in []:
-                    pass
-                button_sair_jogo.handle_event(ev)
-
-        elif ev.type == pygame.MOUSEBUTTONDOWN:
-            if estado == "selec_bioma":
-                for b in buttons_bioma:
-                    b.handle_event(ev)
-            elif estado == "confirma_bioma":
-                button_sim.handle_event(ev)
-            elif estado == "lista_saves":
-                for save_data in buttons_saves:  # percorre todos os saves
-                    load, delete, _, _, _ = save_data
-                    load.handle_event(ev)
-                    delete.handle_event(ev)
-                button_voltar_saves.handle_event(ev)  # trata o botão voltar
+                button_voltar_saves.handle_event(ev)
             elif estado == "menu":
                 for b in buttons_menu:
                     b.handle_event(ev)
             elif estado == "jogo":
                 rects = draw_jogo()
-                for r, act in rects:
-                    if r.collidepoint(ev.pos):
-                        if act == "Plantar Vegetação":
-                            sistema.ecossistema.adicionar_elementos("plantas")
-                            sistema.adicionar_ao_historico()
-                            sistema.ecossistema.simular_mes()
-                        elif act == "Introduzir Herbívoros":
-                            sistema.ecossistema.adicionar_elementos("herbivoros")
-                            sistema.adicionar_ao_historico()
-                            sistema.ecossistema.simular_mes()
-                        elif act == "Introduzir Carnívoros":
-                            sistema.ecossistema.adicionar_elementos("carnivoros")
-                            sistema.adicionar_ao_historico()
-                            sistema.ecossistema.simular_mes()
-                        elif act == "Não Fazer Nada":
-                            sistema.adicionar_ao_historico()
-                            sistema.ecossistema.simular_mes()
-                        elif act == "Salvar":
-                            salvar_jogo()  # apenas salva, sem alterar ecossistema
-                        elif act == "Histórico":
-                            estado = "historico"
+                if ev.type == pygame.MOUSEBUTTONDOWN:
+                    for r, act in rects:
+                        if r.collidepoint(ev.pos):
+                            if act == "Plantar Vegetação":
+                                sistema.ecossistema.adicionar_elementos("plantas")
+                                sistema.adicionar_ao_historico()
+                                sistema.ecossistema.simular_mes()
+                            elif act == "Introduzir Herbívoros":
+                                sistema.ecossistema.adicionar_elementos("herbivoros")
+                                sistema.adicionar_ao_historico()
+                                sistema.ecossistema.simular_mes()
+                            elif act == "Introduzir Carnívoros":
+                                sistema.ecossistema.adicionar_elementos("carnivoros")
+                                sistema.adicionar_ao_historico()
+                                sistema.ecossistema.simular_mes()
+                            elif act == "Não Fazer Nada":
+                                sistema.adicionar_ao_historico()
+                                sistema.ecossistema.simular_mes()
+                            elif act == "Salvar":
+                                salvar_jogo()
+                            elif act == "Histórico":
+                                estado = "historico"
                 button_sair_jogo.handle_event(ev)
-
         elif ev.type == pygame.KEYDOWN:
             if ev.key == pygame.K_ESCAPE:
                 estado = "menu"
 
-    # Desenho das telas
+    # DESENHO
     if estado == "menu":
         draw_menu()
     elif estado == "selec_bioma":

@@ -6,15 +6,20 @@ class SistemaJogo:
     def __init__(self):
         self.ecossistema = None
         self.historico_jogo = []
-        self.current_save_file = None  # Arquivo de save atual
+        self.current_save_file = None  # Arquivo atualmente carregado
 
+    # ---------------------- BIOMA ----------------------
     def escolher_bioma(self, i):
         biomas = ["Amazônia", "Cerrado", "Pantanal", "Caatinga"]
         return biomas[i - 1]
 
     def confirmar_bioma(self, bioma):
         self.ecossistema = Ecossistema(bioma)
+        self.historico_jogo = []           # limpa histórico para jogo novo
+        self.current_save_file = None      # <-- ESSENCIAL: permite criar save novo
 
+
+    # ---------------------- HISTÓRICO ----------------------
     def adicionar_ao_historico(self):
         e = self.ecossistema
         texto = (
@@ -25,7 +30,9 @@ class SistemaJogo:
         )
         self.historico_jogo.append(texto)
 
-    # ------------------- SALVAR COM SUBSTITUIÇÃO -------------------
+    # ============================================================
+    # =====================    SALVAR     =========================
+    # ============================================================
     def salvar(self, arquivo=None):
         if not self.ecossistema:
             return
@@ -41,30 +48,39 @@ class SistemaJogo:
             "historico": self.historico_jogo,
         }
 
-        # Se arquivo externo for passado, sobrescreve
+        # --- 1) Se usuário informou um arquivo → sobrescrever ---
         if arquivo:
             destino = arquivo
-        # Se já carregou um save, sobrescreve o mesmo
+
+        # --- 2) Se já carregou um save antes → sobrescrever o mesmo ---
         elif self.current_save_file:
             destino = self.current_save_file
+
+        # --- 3) Criar novo save (se houver menos de 3 saves) ---
         else:
-            # Novo save
             saves = [f for f in os.listdir() if f.startswith("save") and f.endswith(".json")]
+
             if len(saves) >= 3:
-                print("Limite de 3 saves atingido! Apague algum save existente.")
+                print("Limite de 3 saves atingido! Apague algum save para criar outro.")
                 return
+
+            # Escolhe save1, save2 ou save3
             idx = 1
             while os.path.exists(f"save{idx}.json"):
                 idx += 1
-            destino = f"save{idx}.json"
-            self.current_save_file = destino
 
+            destino = f"save{idx}.json"
+
+        # ----------------- SALVANDO ------------------
         with open(destino, "w") as f:
             json.dump(data, f, indent=4)
-        print(f"Jogo salvo em {destino}")
-        self.current_save_file = destino  # garante que o save atual está atualizado
 
-    # ------------------- CARREGAR SAVE -------------------
+        print(f"Jogo salvo em {destino}")
+        self.current_save_file = destino
+
+    # ============================================================
+    # =====================    CARREGAR    ========================
+    # ============================================================
     def carregar(self, arquivo=None):
         if not arquivo or not os.path.exists(arquivo):
             return False
@@ -78,14 +94,16 @@ class SistemaJogo:
         e.mes = data["mes"]
         e.plantas = data["plantas"]
 
-        for n, q in data["herbivoros"].items():
-            if n in e.herbivoros:
-                e.herbivoros[n].quantidade = q
+        for nome, qtd in data["herbivoros"].items():
+            if nome in e.herbivoros:
+                e.herbivoros[nome].quantidade = qtd
 
-        for n, q in data["carnivoros"].items():
-            if n in e.carnivoros:
-                e.carnivoros[n].quantidade = q
+        for nome, qtd in data["carnivoros"].items():
+            if nome in e.carnivoros:
+                e.carnivoros[nome].quantidade = qtd
 
         self.historico_jogo = data.get("historico", [])
-        self.current_save_file = arquivo  # marca o save carregado como atual
+        self.current_save_file = arquivo  # agora este save é o save atual
+
+        print(f"Save {arquivo} carregado")
         return True
