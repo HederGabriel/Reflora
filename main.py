@@ -20,10 +20,10 @@ sistema = SistemaJogo()
 estado = "menu"
 bioma_selecionado = None
 buttons_saves = []
-alerta_saves = False  # estado de alerta de saves
-alerta_salvo = False  # estado de alerta de jogo salvo
+alerta_saves = False
+alerta_salvo = False
 tempo_alerta_salvo = 0
-TEMPO_ALERTA = 2  # segundos que a mensagem "Jogo salvo!" vai aparecer
+TEMPO_ALERTA = 2  # segundos da mensagem "Jogo salvo!"
 
 button_voltar_saves = Button((SCREEN_W // 2 - 60, 550, 120, 50), "Voltar", FONT, callback=lambda: mudar_estado("menu"))
 
@@ -49,13 +49,11 @@ def carregar_jogo():
     if sistema.carregar():
         mudar_estado("jogo")
 
-# --- ABRIR LISTA DE SAVES ---
 def abrir_lista_saves():
     global estado, buttons_saves, alerta_saves
     saves = [f for f in os.listdir() if f.startswith("save") and f.endswith(".json")]
     buttons_saves = []
-
-    alerta_saves = False  # resetando alerta
+    alerta_saves = False
 
     if saves:
         saves = saves[:3]
@@ -72,9 +70,9 @@ def abrir_lista_saves():
             btn_del = Button((bloco_x + 220, bloco_y + 50, 150, 40), "Apagar", FONT, callback=lambda a=arquivo: apagar_save(a))
             buttons_saves.append((btn_load, btn_del, arquivo, bloco_x, bloco_y))
     else:
-        alerta_saves = True  # indica que não há saves
+        alerta_saves = True
 
-    estado = "lista_saves"  # sempre vai para a tela de saves
+    estado = "lista_saves"
 
 def carregar_save(arq):
     if sistema.carregar(arq):
@@ -89,7 +87,7 @@ def salvar_jogo():
     global alerta_salvo, tempo_alerta_salvo
     sistema.salvar()
     alerta_salvo = True
-    tempo_alerta_salvo = pygame.time.get_ticks()  # marca o momento do save
+    tempo_alerta_salvo = pygame.time.get_ticks()
 
 # --- BOTÕES MENU ---
 btn_carregar = Button((SCREEN_W // 2 - 120, 290, 240, 50), "Carregar", BIG, callback=abrir_lista_saves)
@@ -127,13 +125,36 @@ desc_biomas = {
 
 button_sim = Button((SCREEN_W//2 - 140, 500, 120, 50), "SIM", BIG, callback=confirmar_bioma_final)
 button_nao = Button((SCREEN_W//2 + 20, 500, 120, 50), "NÃO", BIG, callback=lambda: mudar_estado("selec_bioma"))
-button_sair_jogo = Button((SCREEN_W - 120, 20, 100, 40), "Sair", FONT, callback=lambda: mudar_estado("menu"))
+
+# --- NOVOS BOTÕES PARA CONFIRMAR SAIR ---
+def sair_com_salvar():
+    salvar_jogo()
+    mudar_estado("menu")
+
+def sair_sem_salvar():
+    mudar_estado("menu")
+
+# Botões centralizados com tamanho uniforme
+BUTTON_WIDTH = 180
+BUTTON_HEIGHT = 60
+BUTTON_SPACING = 40
+button_sair_jogo = Button((SCREEN_W - 120, 20, 100, 40), "Sair", FONT, callback=lambda: mudar_estado("sair_confirm"))
+button_sair_sim = Button((SCREEN_W//2 - BUTTON_WIDTH - BUTTON_SPACING//2, 300, BUTTON_WIDTH, BUTTON_HEIGHT), 
+                         "Salvar e Sair", BIG, callback=sair_com_salvar)
+button_sair_nao = Button((SCREEN_W//2 + BUTTON_SPACING//2, 300, BUTTON_WIDTH, BUTTON_HEIGHT), 
+                         "Sair sem Salvar", BIG, callback=sair_sem_salvar)
+
+# --- DESENHO CONFIRMA SAIR ---
+def draw_sair_confirm():
+    screen.fill((255, 220, 220))
+    centered_text(screen, "Deseja salvar antes de sair?", BIG, 200)
+    button_sair_sim.draw(screen)
+    button_sair_nao.draw(screen)
 
 # --- DESENHAR TELAS ---
 def draw_menu():
     screen.fill((120, 200, 255))
     centered_text(screen, "REFLORA", BIG, 120)
-    
     for b in buttons_menu:
         b.draw(screen)
 
@@ -158,14 +179,12 @@ def draw_confirma_bioma():
 def draw_lista_saves():
     screen.fill((150, 180, 200))
     centered_text(screen, "Saves Encontrados", BIG, 100)
-
     if not buttons_saves:
         aviso = FONT.render("Você não tem nenhum save.", True, (255, 0, 0))
         screen.blit(aviso, (SCREEN_W//2 - aviso.get_width()//2, SCREEN_H//2 - 20))
         button_voltar_saves.rect.topleft = (SCREEN_W // 2 - 60, SCREEN_H//2 + 20)
         button_voltar_saves.draw(screen)
         return
-
     for load, delete, nome, bloco_x, bloco_y in buttons_saves:
         bloco_altura = 90
         bloco_largura = 400
@@ -177,7 +196,6 @@ def draw_lista_saves():
         delete.rect.topleft = (bloco_x + 220, bloco_y + 50)
         load.draw(screen)
         delete.draw(screen)
-
     button_voltar_saves.rect.topleft = (SCREEN_W // 2 - 60, bloco_y + bloco_altura + 40 if buttons_saves else SCREEN_H//2 + 40)
     button_voltar_saves.draw(screen)
 
@@ -190,7 +208,6 @@ def draw_jogo():
     centered_text(screen,
                   f"Plantas {e.plantas}  |  Herbívoros {sum(a.quantidade for a in e.herbivoros.values())}  |  Carnívoros {sum(a.quantidade for a in e.carnivoros.values())}",
                   FONT, 55)
-
     actions = ["Plantar Vegetação", "Introduzir Herbívoros", "Introduzir Carnívoros", "Não Fazer Nada", "Salvar", "Histórico"]
     rects = []
     for i, act in enumerate(actions):
@@ -199,7 +216,6 @@ def draw_jogo():
         pygame.draw.rect(screen, (190, 190, 190), r, border_radius=5)
         t = FONT.render(act, True, (0, 0, 0))
         screen.blit(t, t.get_rect(center=r.center))
-
     pygame.draw.rect(screen, (255, 255, 255), (350, 120, 600, 440))
     y = 140
     for nome, a in e.herbivoros.items():
@@ -209,8 +225,6 @@ def draw_jogo():
     for nome, a in e.carnivoros.items():
         screen.blit(FONT.render(f"C - {nome}: {a.quantidade}", True, (0, 0, 0)), (360, y))
         y += 26
-
-    # --- ALERTA DE JOGO SALVO ---
     if alerta_salvo:
         agora = pygame.time.get_ticks()
         if (agora - tempo_alerta_salvo) / 1000 < TEMPO_ALERTA:
@@ -218,9 +232,14 @@ def draw_jogo():
             screen.blit(msg, ((SCREEN_W - msg.get_width()) // 2, 580))
         else:
             alerta_salvo = False
-
     button_sair_jogo.draw(screen)
     return rects
+
+def draw_sair_confirm():
+    screen.fill((255, 220, 220))
+    centered_text(screen, "Deseja salvar antes de sair?", BIG, 200)
+    button_sair_sim.draw(screen)
+    button_sair_nao.draw(screen)
 
 # ----------------- LOOP PRINCIPAL -----------------
 running = True
@@ -268,6 +287,9 @@ while running:
                             elif act == "Histórico":
                                 estado = "historico"
                 button_sair_jogo.handle_event(ev)
+            elif estado == "sair_confirm":
+                button_sair_sim.handle_event(ev)
+                button_sair_nao.handle_event(ev)
         elif ev.type == pygame.KEYDOWN:
             if ev.key == pygame.K_ESCAPE:
                 estado = "menu"
@@ -283,6 +305,8 @@ while running:
         draw_lista_saves()
     elif estado == "jogo":
         draw_jogo()
+    elif estado == "sair_confirm":
+        draw_sair_confirm()
 
     pygame.display.flip()
     clock.tick(30)

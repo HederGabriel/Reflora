@@ -1,19 +1,17 @@
 {
     "bioma": "Pantanal",
     "ano": 1,
-    "mes": 2,
-    "plantas": 488,
+    "mes": 1,
+    "plantas": 480,
     "herbivoros": {
-        "Capivara": 0,
-        "Cervo-do-pantanal": 10,
-        "Tatu-peba": 12
+        "Capivara": 18,
+        "Cervo-do-pantanal": 12,
+        "Tatu-peba": 10
     },
     "carnivoros": {
-        "On\u00e7a-pintada": 11,
-        "Ariranha": 6,
-        "Tuiui\u00fa": 8
+        "On\u00e7a-pintada": 6,
+        "Ariranha": 5,
+        "Tuiui\u00fa": 4
     },
-    "historico": [
-        "Ano 1, M\u00eas 1 | Plantas 480 | Herb\u00edvoros 40 | Carn\u00edvoros 21"
-    ]
+    "historico": []
 }
