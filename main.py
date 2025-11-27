@@ -29,7 +29,13 @@ TEMPO_ALERTA = 2
 input_nome_save = ""
 digitando_nome_save = False
 nome_save_atual = None  # guarda o nome do save carregado ou salvo
-button_voltar_saves = Button((SCREEN_W // 2 - 60, 550, 120, 50), "Voltar", FONT, callback=lambda: mudar_estado("menu"))
+criando_novo_jogo = False
+button_voltar_saves = Button(
+    (SCREEN_W // 2 - 60, 550, 120, 50),
+    "Voltar",
+    FONT,
+    callback=lambda: mudar_estado("menu")
+)
 
 # ------------------------------------------------------
 # CALLBACKS
@@ -44,8 +50,11 @@ def escolher_bioma(i):
     estado = "confirma_bioma"
 
 def confirmar_bioma_final():
+    global criando_novo_jogo
+    criando_novo_jogo = True  # <-- marca que é jogo novo
     sistema.confirmar_bioma(sistema.escolher_bioma(bioma_selecionado))
     mudar_estado("jogo")
+
 
 def abrir_lista_saves():
     global estado, buttons_saves, alerta_saves
@@ -89,30 +98,39 @@ def iniciar_nome_save():
     input_nome_save = ""
 
 def salvar_jogo():
-    global alerta_salvo, tempo_alerta_salvo
+    """Salva o jogo usando o nome atual ou pede para digitar se não houver."""
+    global alerta_salvo, tempo_alerta_salvo, digitando_nome_save
     if nome_save_atual:  # já existe nome de save
-        sistema.salvar(nome_save=nome_save_atual)
+        # Exemplo em salvar_jogo_com_enter()
+        sistema.salvar(nome_save=nome_save_atual, criando_novo_jogo=criando_novo_jogo)
         alerta_salvo = True
         tempo_alerta_salvo = pygame.time.get_ticks()
     else:
         iniciar_nome_save()  # pede nome do save
+        digitando_nome_save = True  # ativa input
 
 def salvar_jogo_com_enter():
     global nome_save_atual, input_nome_save, alerta_salvo, tempo_alerta_salvo, digitando_nome_save
     if input_nome_save.strip() == "":
         return
     nome_save_atual = input_nome_save.strip()
-    sistema.salvar(nome_save=nome_save_atual)
+    sistema.salvar(nome_save=nome_save_atual, criando_novo_jogo=criando_novo_jogo)  # Sistema já checa limite de 3 saves
     alerta_salvo = True
     tempo_alerta_salvo = pygame.time.get_ticks()
     digitando_nome_save = False
+    input_nome_save = ""  # reset do input após salvar
 
 def sair_e_salvar():
+    """Salva e volta ao menu. Se não houver nome de save, pede e depois volta ao menu."""
+    global alerta_salvo, tempo_alerta_salvo, digitando_nome_save
     if nome_save_atual:
-        salvar_jogo()
+        sistema.salvar(nome_save=nome_save_atual, criando_novo_jogo=criando_novo_jogo)
+        alerta_salvo = True
+        tempo_alerta_salvo = pygame.time.get_ticks()
         mudar_estado("menu")
     else:
         iniciar_nome_save()
+        digitando_nome_save = True  # mantém estado atual, loop tratar ENTER para voltar ao menu
 
 # ------------------------------------------------------
 # BOTÕES

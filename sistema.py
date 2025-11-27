@@ -16,7 +16,7 @@ class SistemaJogo:
     def confirmar_bioma(self, bioma):
         self.ecossistema = Ecossistema(bioma)
         self.historico_jogo = []           # limpa histórico para jogo novo
-        self.current_save_file = None      # <-- ESSENCIAL: permite criar save novo
+        self.current_save_file = None      # permite criar save novo
 
     # ---------------------- HISTÓRICO ----------------------
     def adicionar_ao_historico(self):
@@ -30,9 +30,9 @@ class SistemaJogo:
         self.historico_jogo.append(texto)
 
     # ============================================================
-    # =====================    SALVAR     =========================
+    # =====================    SALVAR     ========================
     # ============================================================
-    def salvar(self, arquivo=None, nome_save=None):
+    def salvar(self, nome_save=None, criando_novo_jogo=False):
         if not self.ecossistema:
             return
 
@@ -47,38 +47,28 @@ class SistemaJogo:
             "historico": self.historico_jogo,
         }
 
-        # --- 1) Se usuário informou um arquivo → sobrescrever ---
-        if arquivo:
-            destino = arquivo
-
-        # --- 2) Se já carregou um save antes → sobrescrever o mesmo ---
-        elif self.current_save_file:
+        # Se está carregando um save e NÃO é um jogo novo → sobrescrever
+        if self.current_save_file and not criando_novo_jogo:
             destino = self.current_save_file
 
-        # --- 3) Criar novo save ---
-        else:
-            saves = [f for f in os.listdir() if f.startswith("save") and f.endswith(".json")]
-
-            if len(saves) >= 3:
-                print("Limite de 3 saves atingido! Apague algum save para criar outro.")
+        # Se usuário digitou nome de save → usar esse nome
+        elif nome_save:
+            destino = f"{nome_save}.json"
+            if os.path.exists(destino) and destino != self.current_save_file:
+                print(f"Save '{destino}' já existe! Escolha outro nome.")
                 return
 
-            # Se o jogador digitou um nome
-            if nome_save:
-                destino = f"{nome_save}.json"
-                if os.path.exists(destino):
-                    print(f"Save '{destino}' já existe. Será sobrescrito.")
-            else:
-                # Escolhe save1, save2 ou save3 automaticamente
-                idx = 1
-                while os.path.exists(f"save{idx}.json") and idx <= 3:
-                    idx += 1
-                if idx > 3:
-                    print("Limite de 3 saves atingido! Apague algum save para criar outro.")
-                    return
-                destino = f"save{idx}.json"
+        # Criar novo save automático (save1, save2, save3)
+        else:
+            idx = 1
+            while os.path.exists(f"save{idx}.json") and idx <= 3:
+                idx += 1
+            if idx > 3:
+                print("Limite de 3 saves atingido! Apague algum save para criar outro.")
+                return
+            destino = f"save{idx}.json"
 
-        # ----------------- SALVANDO ------------------
+        # Salva no arquivo definido
         with open(destino, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
 
@@ -86,7 +76,7 @@ class SistemaJogo:
         self.current_save_file = destino
 
     # ============================================================
-    # =====================    CARREGAR    ========================
+    # =====================    CARREGAR    =======================
     # ============================================================
     def carregar(self, arquivo=None):
         if not arquivo or not os.path.exists(arquivo):
@@ -110,7 +100,7 @@ class SistemaJogo:
                 e.carnivoros[nome].quantidade = qtd
 
         self.historico_jogo = data.get("historico", [])
-        self.current_save_file = arquivo  # agora este save é o save atual
+        self.current_save_file = arquivo  # este save é o atual
 
         print(f"Save {arquivo} carregado")
         return True
