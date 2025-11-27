@@ -27,6 +27,9 @@ alerta_saves = False
 alerta_salvo = False
 tempo_alerta_salvo = 0
 TEMPO_ALERTA = 2  # segundos da mensagem "Jogo salvo!"
+input_nome_save = ""
+digitando_nome_save = False
+
 
 button_voltar_saves = Button((SCREEN_W // 2 - 60, 550, 120, 50), "Voltar", FONT, callback=lambda: mudar_estado("menu"))
 
@@ -94,6 +97,11 @@ def salvar_jogo():
     sistema.salvar()
     alerta_salvo = True
     tempo_alerta_salvo = pygame.time.get_ticks()
+
+def salvar_jogo_com_nome():
+    global alerta_salvo, tempo_alerta_salvo, digitando_nome_save, input_nome_save
+    digitando_nome_save = True
+    input_nome_save = ""
 
 # ------------------------------------------------------
 # BOTÕES MENU
@@ -219,6 +227,15 @@ def draw_lista_saves():
     button_voltar_saves.rect.topleft = (SCREEN_W//2 - 60, bloco_y + 130)
     button_voltar_saves.draw(screen)
 
+def draw_input_save():
+    screen.fill((200, 200, 255))
+    centered_text(screen, "Digite o nome do save e pressione ENTER", FONT, 100)
+    
+    # Caixa de texto
+    pygame.draw.rect(screen, (255, 255, 255), (SCREEN_W//2 - 150, 200, 300, 50))
+    t = FONT.render(input_nome_save, True, (0, 0, 0))
+    screen.blit(t, (SCREEN_W//2 - 140, 210))
+
 def draw_jogo():
     global alerta_salvo
     e = sistema.ecossistema
@@ -264,9 +281,27 @@ def draw_jogo():
 
     return rects
 
-# ------------------------------------------------------
+# ------------------------------------------------------ 
 # LOOP PRINCIPAL
 # ------------------------------------------------------
+
+input_nome_save = ""
+digitando_nome_save = False
+
+def salvar_jogo_com_nome():
+    global digitando_nome_save, input_nome_save
+    digitando_nome_save = True
+    input_nome_save = ""
+
+def draw_input_save():
+    screen.fill((200, 200, 255))
+    centered_text(screen, "Digite o nome do save e pressione ENTER", FONT, 100)
+    
+    # Caixa de texto
+    pygame.draw.rect(screen, (255, 255, 255), (SCREEN_W//2 - 150, 200, 300, 50))
+    t = FONT.render(input_nome_save, True, (0, 0, 0))
+    screen.blit(t, (SCREEN_W//2 - 140, 210))
+
 
 running = True
 while running:
@@ -275,6 +310,9 @@ while running:
             running = False
 
         elif ev.type in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONDOWN):
+            if digitando_nome_save:
+                continue  # Desativa clicks enquanto digita nome do save
+
             if estado == "menu":
                 for b in buttons_menu: b.handle_event(ev)
 
@@ -319,7 +357,7 @@ while running:
                                 sistema.ecossistema.simular_mes()
 
                             elif act == "Salvar":
-                                salvar_jogo()
+                                salvar_jogo_com_nome()
 
                             elif act == "Histórico":
                                 pass
@@ -328,22 +366,33 @@ while running:
                 button_sair_sim.handle_event(ev)
                 button_sair_nao.handle_event(ev)
 
-    # DESENHO DAS TELAS
-    if estado == "menu":
-        draw_menu()
+        # -----------------------
+        # Captura de teclado para digitar nome do save
+        # -----------------------
+        if digitando_nome_save and ev.type == pygame.KEYDOWN:
+            if ev.key == pygame.K_RETURN:
+                sistema.salvar(nome_save=input_nome_save)
+                alerta_salvo = True
+                tempo_alerta_salvo = pygame.time.get_ticks()
+                digitando_nome_save = False
+            elif ev.key == pygame.K_BACKSPACE:
+                input_nome_save = input_nome_save[:-1]
+            else:
+                input_nome_save += ev.unicode
 
+    # DESENHO DAS TELAS
+    if digitando_nome_save:
+        draw_input_save()
+    elif estado == "menu":
+        draw_menu()
     elif estado == "selec_bioma":
         draw_selec_bioma()
-
     elif estado == "confirma_bioma":
         draw_confirma_bioma()
-
     elif estado == "lista_saves":
         draw_lista_saves()
-
     elif estado == "jogo":
         draw_jogo()
-
     elif estado == "sair_confirm":
         draw_sair_confirm()
 

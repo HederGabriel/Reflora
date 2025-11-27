@@ -32,7 +32,7 @@ class SistemaJogo:
     # ============================================================
     # =====================    SALVAR     =========================
     # ============================================================
-    def salvar(self, arquivo=None):
+    def salvar(self, arquivo=None, nome_save=None):
         if not self.ecossistema:
             return
 
@@ -55,7 +55,7 @@ class SistemaJogo:
         elif self.current_save_file:
             destino = self.current_save_file
 
-        # --- 3) Criar novo save (até 3 saves) ---
+        # --- 3) Criar novo save ---
         else:
             saves = [f for f in os.listdir() if f.startswith("save") and f.endswith(".json")]
 
@@ -63,16 +63,20 @@ class SistemaJogo:
                 print("Limite de 3 saves atingido! Apague algum save para criar outro.")
                 return
 
-            # Escolhe save1, save2 ou save3 automaticamente
-            idx = 1
-            while os.path.exists(f"save{idx}.json") and idx <= 3:
-                idx += 1
-
-            if idx > 3:
-                print("Limite de 3 saves atingido! Apague algum save para criar outro.")
-                return
-
-            destino = f"save{idx}.json"
+            # Se o jogador digitou um nome
+            if nome_save:
+                destino = f"{nome_save}.json"
+                if os.path.exists(destino):
+                    print(f"Save '{destino}' já existe. Será sobrescrito.")
+            else:
+                # Escolhe save1, save2 ou save3 automaticamente
+                idx = 1
+                while os.path.exists(f"save{idx}.json") and idx <= 3:
+                    idx += 1
+                if idx > 3:
+                    print("Limite de 3 saves atingido! Apague algum save para criar outro.")
+                    return
+                destino = f"save{idx}.json"
 
         # ----------------- SALVANDO ------------------
         with open(destino, "w", encoding="utf-8") as f:
