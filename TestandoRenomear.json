@@ -1,19 +1,20 @@
 {
     "bioma": "Cerrado",
     "ano": 1,
-    "mes": 2,
-    "plantas": 484,
+    "mes": 3,
+    "plantas": 544,
     "herbivoros": {
         "Tamandu\u00e1-bandeira": 0,
-        "Tatu-canastra": 13,
-        "Veado-campeiro": 13
+        "Tatu-canastra": 0,
+        "Veado-campeiro": 0
     },
     "carnivoros": {
         "Lobo-guar\u00e1": 5,
-        "Jaguatirica": 6,
+        "Jaguatirica": 7,
         "Gavi\u00e3o-carrapateiro": 4
     },
     "historico": [
-        "Ano 1, M\u00eas 1 | Plantas 450 | Herb\u00edvoros 37 | Carn\u00edvoros 15"
+        "Ano 1, M\u00eas 1 | Plantas 450 | Herb\u00edvoros 37 | Carn\u00edvoros 15",
+        "Ano 1, M\u00eas 2 | Plantas 484 | Herb\u00edvoros 26 | Carn\u00edvoros 15"
     ]
 }
