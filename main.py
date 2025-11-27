@@ -28,7 +28,7 @@ tempo_alerta_salvo = 0
 TEMPO_ALERTA = 2
 input_nome_save = ""
 digitando_nome_save = False
-
+nome_save_atual = None  # guarda o nome do save carregado ou salvo
 button_voltar_saves = Button((SCREEN_W // 2 - 60, 550, 120, 50), "Voltar", FONT, callback=lambda: mudar_estado("menu"))
 
 # ------------------------------------------------------
@@ -54,10 +54,8 @@ def abrir_lista_saves():
     alerta_saves = False
 
     if saves:
-        saves = saves[:10]  # Limita a exibir 10 saves
-        bloco_altura = 90
-        bloco_largura = 400
-        spacing = 30
+        saves = saves[:10]
+        bloco_altura, bloco_largura, spacing = 90, 400, 30
         total_height = len(saves) * (bloco_altura + spacing) - spacing
         start_y = (SCREEN_H - total_height) // 2
 
@@ -73,7 +71,9 @@ def abrir_lista_saves():
     estado = "lista_saves"
 
 def carregar_save(arq):
+    global nome_save_atual
     if sistema.carregar(arq):
+        nome_save_atual = arq.replace(".json", "")
         mudar_estado("jogo")
     else:
         print(f"Falha ao carregar {arq}. Arquivo não encontrado ou inválido.")
@@ -83,16 +83,29 @@ def apagar_save(arq):
         os.remove(arq)
     abrir_lista_saves()
 
-def salvar_jogo():
-    global alerta_salvo, tempo_alerta_salvo
-    sistema.salvar()
-    alerta_salvo = True
-    tempo_alerta_salvo = pygame.time.get_ticks()
-
 def iniciar_nome_save():
     global digitando_nome_save, input_nome_save
     digitando_nome_save = True
     input_nome_save = ""
+
+def salvar_jogo():
+    global alerta_salvo, tempo_alerta_salvo
+    if nome_save_atual:
+        sistema.salvar(nome_save=nome_save_atual)
+        alerta_salvo = True
+        tempo_alerta_salvo = pygame.time.get_ticks()
+    else:
+        iniciar_nome_save()
+
+def salvar_jogo_com_enter():
+    global alerta_salvo, tempo_alerta_salvo, digitando_nome_save, nome_save_atual, input_nome_save
+    if input_nome_save.strip() == "":
+        return
+    nome_save_atual = input_nome_save.strip()
+    sistema.salvar(nome_save=nome_save_atual)
+    alerta_salvo = True
+    tempo_alerta_salvo = pygame.time.get_ticks()
+    digitando_nome_save = False
 
 # ------------------------------------------------------
 # BOTÕES MENU
@@ -138,7 +151,12 @@ button_nao = Button((SCREEN_W//2 + 20, 500, 120, 50), "NÃO", BIG, callback=lamb
 # ------------------------------------------------------
 BUTTON_WIDTH, BUTTON_HEIGHT = 220, 60
 button_sair_jogo = Button((SCREEN_W - 120, 20, 100, 40), "Sair", FONT, callback=lambda: mudar_estado("sair_confirm"))
-button_sair_sim = Button((SCREEN_W//2 - BUTTON_WIDTH - 20, 300, BUTTON_WIDTH, BUTTON_HEIGHT), "Salvar e Sair", BIG, callback=lambda: (salvar_jogo(), mudar_estado("menu")))
+button_sair_sim = Button(
+    (SCREEN_W//2 - BUTTON_WIDTH - 20, 300, BUTTON_WIDTH, BUTTON_HEIGHT),
+    "Salvar e Sair",
+    BIG,
+    callback=lambda: (salvar_jogo(), mudar_estado("menu"))
+)
 button_sair_nao = Button((SCREEN_W//2 + 20, 300, BUTTON_WIDTH, BUTTON_HEIGHT), "Sair sem Salvar", BIG, callback=lambda: mudar_estado("menu"))
 
 def draw_sair_confirm():
@@ -248,7 +266,7 @@ while running:
 
         elif ev.type in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONDOWN):
             if digitando_nome_save:
-                continue  # desativa clicks enquanto digita save
+                continue
 
             if estado == "menu":
                 for b in buttons_menu: b.handle_event(ev)
@@ -285,7 +303,7 @@ while running:
                                 sistema.adicionar_ao_historico()
                                 sistema.ecossistema.simular_mes()
                             elif act == "Salvar":
-                                iniciar_nome_save()
+                                salvar_jogo()
                             elif act == "Histórico":
                                 pass
             elif estado == "sair_confirm":
@@ -295,10 +313,7 @@ while running:
         # Captura de teclado para digitar nome do save
         if digitando_nome_save and ev.type == pygame.KEYDOWN:
             if ev.key == pygame.K_RETURN:
-                sistema.salvar(nome_save=input_nome_save)
-                alerta_salvo = True
-                tempo_alerta_salvo = pygame.time.get_ticks()
-                digitando_nome_save = False
+                salvar_jogo_com_enter()
             elif ev.key == pygame.K_BACKSPACE:
                 input_nome_save = input_nome_save[:-1]
             else:
