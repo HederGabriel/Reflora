@@ -18,7 +18,6 @@ class SistemaJogo:
         self.historico_jogo = []           # limpa histórico para jogo novo
         self.current_save_file = None      # <-- ESSENCIAL: permite criar save novo
 
-
     # ---------------------- HISTÓRICO ----------------------
     def adicionar_ao_historico(self):
         e = self.ecossistema
@@ -56,7 +55,7 @@ class SistemaJogo:
         elif self.current_save_file:
             destino = self.current_save_file
 
-        # --- 3) Criar novo save (se houver menos de 3 saves) ---
+        # --- 3) Criar novo save (até 3 saves) ---
         else:
             saves = [f for f in os.listdir() if f.startswith("save") and f.endswith(".json")]
 
@@ -64,15 +63,19 @@ class SistemaJogo:
                 print("Limite de 3 saves atingido! Apague algum save para criar outro.")
                 return
 
-            # Escolhe save1, save2 ou save3
+            # Escolhe save1, save2 ou save3 automaticamente
             idx = 1
-            while os.path.exists(f"save{idx}.json"):
+            while os.path.exists(f"save{idx}.json") and idx <= 3:
                 idx += 1
+
+            if idx > 3:
+                print("Limite de 3 saves atingido! Apague algum save para criar outro.")
+                return
 
             destino = f"save{idx}.json"
 
         # ----------------- SALVANDO ------------------
-        with open(destino, "w") as f:
+        with open(destino, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
 
         print(f"Jogo salvo em {destino}")
@@ -85,7 +88,7 @@ class SistemaJogo:
         if not arquivo or not os.path.exists(arquivo):
             return False
 
-        with open(arquivo, "r") as f:
+        with open(arquivo, "r", encoding="utf-8") as f:
             data = json.load(f)
 
         self.ecossistema = Ecossistema(data["bioma"])
