@@ -90,15 +90,15 @@ def iniciar_nome_save():
 
 def salvar_jogo():
     global alerta_salvo, tempo_alerta_salvo
-    if nome_save_atual:
+    if nome_save_atual:  # já existe nome de save
         sistema.salvar(nome_save=nome_save_atual)
         alerta_salvo = True
         tempo_alerta_salvo = pygame.time.get_ticks()
     else:
-        iniciar_nome_save()
+        iniciar_nome_save()  # pede nome do save
 
 def salvar_jogo_com_enter():
-    global alerta_salvo, tempo_alerta_salvo, digitando_nome_save, nome_save_atual, input_nome_save
+    global nome_save_atual, input_nome_save, alerta_salvo, tempo_alerta_salvo, digitando_nome_save
     if input_nome_save.strip() == "":
         return
     nome_save_atual = input_nome_save.strip()
@@ -107,9 +107,22 @@ def salvar_jogo_com_enter():
     tempo_alerta_salvo = pygame.time.get_ticks()
     digitando_nome_save = False
 
+def sair_e_salvar():
+    if nome_save_atual:
+        salvar_jogo()
+        mudar_estado("menu")
+    else:
+        iniciar_nome_save()
+
 # ------------------------------------------------------
-# BOTÕES MENU
+# BOTÕES
 # ------------------------------------------------------
+BUTTON_WIDTH, BUTTON_HEIGHT = 220, 60
+
+button_sair_jogo = Button((SCREEN_W - 120, 20, 100, 40), "Sair", FONT, callback=lambda: mudar_estado("sair_confirm"))
+button_sair_sim = Button((SCREEN_W//2 - BUTTON_WIDTH - 20, 300, BUTTON_WIDTH, BUTTON_HEIGHT), "Salvar e Sair", BIG, callback=sair_e_salvar)
+button_sair_nao = Button((SCREEN_W//2 + 20, 300, BUTTON_WIDTH, BUTTON_HEIGHT), "Sair sem Salvar", BIG, callback=lambda: mudar_estado("menu"))
+
 btn_carregar = Button((SCREEN_W // 2 - 120, 290, 240, 50), "Carregar", BIG, callback=abrir_lista_saves)
 buttons_menu = [
     Button((SCREEN_W // 2 - 120, 220, 240, 50), "Jogar (Novo)", BIG, callback=lambda: mudar_estado("selec_bioma")),
@@ -117,9 +130,6 @@ buttons_menu = [
     Button((SCREEN_W // 2 - 120, 360, 240, 50), "Sair", BIG, callback=lambda: sys.exit()),
 ]
 
-# ------------------------------------------------------
-# BOTÕES SELEÇÃO DE BIOMA
-# ------------------------------------------------------
 labels = ["Amazônia", "Cerrado", "Pantanal", "Caatinga"]
 buttons_bioma = []
 button_width, button_height, spacing = 200, 50, 30
@@ -133,9 +143,6 @@ for i, lbl in enumerate(labels, start=1):
 
 button_cancelar_bioma = Button((SCREEN_W // 2 - 100, 500, 200, 50), "Cancelar", BIG, callback=lambda: mudar_estado("menu"))
 
-# ------------------------------------------------------
-# DESCRIÇÕES DOS BIOMAS
-# ------------------------------------------------------
 desc_biomas = {
     1: ["Amazônia", "• Maior biodiversidade do mundo", "• Altas chuvas e grande vegetação", "• Herbívoros e carnívoros variados"],
     2: ["Cerrado", "• Savana brasileira", "• Árvores baixas e vegetação resistente", "• Diversidade de mamíferos"],
@@ -147,26 +154,7 @@ button_sim = Button((SCREEN_W//2 - 140, 500, 120, 50), "SIM", BIG, callback=conf
 button_nao = Button((SCREEN_W//2 + 20, 500, 120, 50), "NÃO", BIG, callback=lambda: mudar_estado("selec_bioma"))
 
 # ------------------------------------------------------
-# TELA DE SAIR
-# ------------------------------------------------------
-BUTTON_WIDTH, BUTTON_HEIGHT = 220, 60
-button_sair_jogo = Button((SCREEN_W - 120, 20, 100, 40), "Sair", FONT, callback=lambda: mudar_estado("sair_confirm"))
-button_sair_sim = Button(
-    (SCREEN_W//2 - BUTTON_WIDTH - 20, 300, BUTTON_WIDTH, BUTTON_HEIGHT),
-    "Salvar e Sair",
-    BIG,
-    callback=lambda: (salvar_jogo(), mudar_estado("menu"))
-)
-button_sair_nao = Button((SCREEN_W//2 + 20, 300, BUTTON_WIDTH, BUTTON_HEIGHT), "Sair sem Salvar", BIG, callback=lambda: mudar_estado("menu"))
-
-def draw_sair_confirm():
-    screen.fill((255, 220, 220))
-    centered_text(screen, "Deseja salvar antes de sair?", BIG, 200)
-    button_sair_sim.draw(screen)
-    button_sair_nao.draw(screen)
-
-# ------------------------------------------------------
-# DESENHO TELAS
+# DESENHO DAS TELAS
 # ------------------------------------------------------
 def draw_menu():
     screen.fill((120, 200, 255))
@@ -255,6 +243,12 @@ def draw_jogo():
     button_sair_jogo.draw(screen)
     return rects
 
+def draw_sair_confirm():
+    screen.fill((255, 220, 220))
+    centered_text(screen, "Deseja salvar antes de sair?", BIG, 200)
+    button_sair_sim.draw(screen)
+    button_sair_nao.draw(screen)
+
 # ------------------------------------------------------
 # LOOP PRINCIPAL
 # ------------------------------------------------------
@@ -266,7 +260,7 @@ while running:
 
         elif ev.type in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONDOWN):
             if digitando_nome_save:
-                continue
+                continue  # desativa clicks enquanto digita nome do save
 
             if estado == "menu":
                 for b in buttons_menu: b.handle_event(ev)
@@ -314,6 +308,8 @@ while running:
         if digitando_nome_save and ev.type == pygame.KEYDOWN:
             if ev.key == pygame.K_RETURN:
                 salvar_jogo_com_enter()
+                if estado == "sair_confirm":
+                    mudar_estado("menu")
             elif ev.key == pygame.K_BACKSPACE:
                 input_nome_save = input_nome_save[:-1]
             else:
