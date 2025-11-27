@@ -60,12 +60,15 @@ def carregar_jogo():
 
 def abrir_lista_saves():
     global estado, buttons_saves, alerta_saves
-    saves = [f for f in os.listdir() if f.startswith("save") and f.endswith(".json")]
+    # Agora pega todos os arquivos .json no diretório
+    saves = [f for f in os.listdir() if f.endswith(".json")]
+
     buttons_saves = []
     alerta_saves = False
 
     if saves:
-        saves = saves[:3]
+        # Limitando a exibir no máximo 10 para não bagunçar a tela
+        saves = saves[:10]
         bloco_altura = 90
         bloco_largura = 400
         spacing = 30
@@ -86,6 +89,9 @@ def abrir_lista_saves():
 def carregar_save(arq):
     if sistema.carregar(arq):
         mudar_estado("jogo")
+    else:
+        print(f"Falha ao carregar {arq}. Arquivo não encontrado ou inválido.")
+
 
 def apagar_save(arq):
     if os.path.exists(arq):
