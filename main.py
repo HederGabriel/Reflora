@@ -110,20 +110,35 @@ def iniciar_nome_save():
 def salvar_jogo():
     global alerta_salvo, tempo_alerta_salvo
 
+    # Se não tem nome associado -> abrir input
     if not nome_save_atual:
         iniciar_nome_save()
         return
 
     sucesso = sistema.salvar(nome_save=nome_save_atual)
 
+    # Se o sistema sinalizou que atingiu o limite -> abrir substituição
     if sistema.save_limit_reached:
+        # garantir que o temporário exista e a UI esteja consistente
+        sistema.save_limit_reached = True
         mudar_estado("substituir_save")
         return
 
-    if sucesso:
-        alerta_salvo = True
-        tempo_alerta_salvo = pygame.time.get_ticks()
+    if not sucesso:
+        # Falha inesperada (por exemplo conflito de nome) -> força o usuário a re-digitar
+        iniciar_nome_save()
+        alerta_nome_existente = True
+        return
 
+    # sucesso: sincroniza nomes e sinaliza alerta
+    if sistema.current_save_file:
+        # garante que nome_save_atual esteja sempre sincronizado com current_save_file
+        nome_limpo = sistema.current_save_file.replace('.json', '')
+        # atualizar global
+        globals()['nome_save_atual'] = nome_limpo
+
+    alerta_salvo = True
+    tempo_alerta_salvo = pygame.time.get_ticks()
 
 def salvar_jogo_com_enter():
     global nome_save_atual, input_nome_save, alerta_salvo
@@ -133,29 +148,30 @@ def salvar_jogo_com_enter():
     alerta_nome_vazio = False
     alerta_nome_existente = False
 
-    if input_nome_save.strip() == "":
+    nome = input_nome_save.strip()
+    if nome == "":
         alerta_nome_vazio = True
         return
 
-    nome = input_nome_save.strip()
-
     sucesso = sistema.salvar(nome_save=nome)
+
     if not sucesso:
         if sistema.save_limit_reached:
+            # save temporário criado => abrir substituição
             digitando_nome_save = False
             input_nome_save = ""
             mudar_estado("substituir_save")
             return
         else:
+            # nome duplicado
             alerta_nome_existente = True
             return
 
-    nome_save_atual = nome
-    if sistema.current_save_file:
-        nome_save_atual = sistema.current_save_file.replace('.json', '')
-
+    # salvo com sucesso => sincroniza
+    nome_save_atual = sistema.current_save_file.replace('.json', '') if sistema.current_save_file else nome
     alerta_salvo = True
     tempo_alerta_salvo = pygame.time.get_ticks()
+
     digitando_nome_save = False
     input_nome_save = ""
 
@@ -179,15 +195,15 @@ def sair_e_salvar():
 
 def substituir_save(alvo):
     global nome_save_atual
+    # se existe o tmp
     if os.path.exists('saveJogo.json'):
+        # remove alvo se existir
         if os.path.exists(alvo):
             os.remove(alvo)
-
         os.rename('saveJogo.json', alvo)
         sistema.current_save_file = alvo
         sistema.save_limit_reached = False
-        nome_save_atual = alvo.replace('.json', '')
-
+        nome_save_atual = alvo.replace('.json','')
     mudar_estado('jogo')
 
 def cancelar_substituir():

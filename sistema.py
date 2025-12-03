@@ -7,11 +7,13 @@ class SistemaJogo:
     def __init__(self):
         self.ecossistema = None
         self.historico_jogo = []
-        self.current_save_file = None        # save atualmente carregado
-        self.save_limit_reached = False      # usado pelo main
-        self.temp_save_file = "saveJogo.json"
+        self.current_save_file = None          # save atualmente carregado (string)
+        self.save_limit_reached = False        # usado pelo main para abrir tela de substituição
+        self.temp_save_file = "saveJogo.json"  # save temporário (não apague)
 
-    # ---------------------- BIOMA ----------------------
+    # -------------------------------------------------
+    # BIOMA
+    # -------------------------------------------------
     def escolher_bioma(self, i):
         biomas = ["Amazônia", "Cerrado", "Pantanal", "Caatinga"]
         return biomas[i - 1]
@@ -19,9 +21,11 @@ class SistemaJogo:
     def confirmar_bioma(self, bioma):
         self.ecossistema = Ecossistema(bioma)
         self.historico_jogo = []
-        self.current_save_file = None        # novo jogo não tem save associado ainda
+        self.current_save_file = None   # novo jogo começa sem save associado
 
-    # ---------------------- HISTÓRICO ----------------------
+    # -------------------------------------------------
+    # HISTÓRICO
+    # -------------------------------------------------
     def adicionar_ao_historico(self):
         e = self.ecossistema
         texto = (
@@ -38,18 +42,19 @@ class SistemaJogo:
     def salvar(self, nome_save=None):
         """
         Fluxo:
-        - Se já existe current_save_file → sobrescreve direto.
-        - Se NÃO existe save atual:
-            - Se usuário forneceu nome → tenta criar.
-            - Se já existem 3 saves → cria save temporário e avisa o main.
-            - Senão → cria save automático.
+        - Se já existe current_save_file  -> sobrescreve
+        - Se NÃO existe:
+            - Se nome_save foi digitado -> tenta criar
+            - Se já houver 3 saves -> cria save temporário "saveJogo.json"
         """
 
+        # Nenhum jogo carregado
         if not self.ecossistema:
             return False
 
-        # dados do jogo
         e = self.ecossistema
+
+        # dados do save
         data = {
             "bioma": e.bioma,
             "ano": e.ano,
@@ -61,55 +66,67 @@ class SistemaJogo:
         }
 
         # =====================================================
-        # 1) SAVE ATUAL EXISTENTE → sobrescrever
+        # 1) EXISTE SAVE CARREGADO → SOBRESCREVER
         # =====================================================
         if self.current_save_file:
             destino = self.current_save_file
             with open(destino, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4)
-            print(f"Jogo sobrescrito em {destino}")
+
+            print(f"[Salvar] Sobrescrito: {destino}")
+            self.save_limit_reached = False
             return True
 
         # =====================================================
-        # 2) CRIAR NOVO SAVE
+        # 2) CRIANDO NOVO SAVE
         # =====================================================
 
-        # filtrar apenas saves do jogo
+        # Filtrar apenas saves do jogo (evita contar configs)
         saves = [
             f for f in os.listdir()
             if f.endswith(".json") and "save" in f.lower()
         ]
 
-        # ----- limite atingido -----
+        # -----------------------------------------------------
+        # LIMITE DE 3 SAVES -> criar temporário
+        # -----------------------------------------------------
         if len(saves) >= 3:
+
+            # cria save temporário (NÃO apaga nada do usuário)
             with open(self.temp_save_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4)
 
-            print("⚠ Limite de 3 saves atingido! Criado save temporário.")
+            print("⚠ Limite de 3 saves atingido. Criado save temporário: saveJogo.json")
+            print("⚠ O main deve abrir a tela de substituição.")
             self.save_limit_reached = True
             return False
 
-        # ----- nome manual fornecido -----
+        # -----------------------------------------------------
+        # NOME FOI DIGITADO PELO USUÁRIO
+        # -----------------------------------------------------
         if nome_save:
             destino = f"{nome_save}.json"
 
+            # impedir sobrescrever save existente sem intenção
             if os.path.exists(destino):
-                print("⚠ Esse nome já existe! Escolha outro.")
+                print("⚠ Esse nome já existe. Usuário deve digitar outro nome.")
                 return False
 
         else:
-            # nome automático
+            # Criar save automático: save1, save2, save3
             idx = 1
             while os.path.exists(f"save{idx}.json"):
                 idx += 1
             destino = f"save{idx}.json"
 
-        # criar arquivo
+        # Criar arquivo final
         with open(destino, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
 
-        print(f"Novo save criado: {destino}")
+        print(f"[Salvar] Novo save criado: {destino}")
+
         self.current_save_file = destino
+        self.save_limit_reached = False
         return True
 
     # ============================================================
@@ -118,11 +135,13 @@ class SistemaJogo:
     def carregar(self, arquivo=None):
 
         if not arquivo or not os.path.exists(arquivo):
+            print("Erro ao carregar: arquivo inexistente.")
             return False
 
         with open(arquivo, "r", encoding="utf-8") as f:
             data = json.load(f)
 
+        # criar ecossistema a partir do save
         self.ecossistema = Ecossistema(data["bioma"])
         e = self.ecossistema
 
@@ -130,6 +149,7 @@ class SistemaJogo:
         e.mes = data["mes"]
         e.plantas = data["plantas"]
 
+        # restaurar animais
         for nome, qtd in data["herbivoros"].items():
             if nome in e.herbivoros:
                 e.herbivoros[nome].quantidade = qtd
@@ -138,9 +158,12 @@ class SistemaJogo:
             if nome in e.carnivoros:
                 e.carnivoros[nome].quantidade = qtd
 
+        # histórico
         self.historico_jogo = data.get("historico", [])
+
+        # marcar como save carregado
         self.current_save_file = arquivo
         self.save_limit_reached = False
 
-        print(f"Save carregado: {arquivo}")
+        print(f"[Carregar] Save carregado: {arquivo}")
         return True
