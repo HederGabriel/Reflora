@@ -375,18 +375,23 @@ def substituir_save(alvo):
         abrir_lista_saves()
         return
 
-    # limpa estado e variável do nome digitado
-    nome_digitado_para_save = None
+    # Limpa modal/estado e atualiza UI
     modal_ativo = False
     modal_slot = None
 
-    # atualiza slots visuais
+    # Recarrega slots após substituição
     try:
         slots = carregar_slots(modo_sub=False)
     except Exception:
         pass
 
+    # ---- NOVO: marcar alerta de jogo salvo ----
+    global alerta_salvo, tempo_alerta_salvo
+    alerta_salvo = True
+    tempo_alerta_salvo = pygame.time.get_ticks()
+
     print("[DEBUG] substituir_save: finalizado com sucesso. Voltando ao jogo.")
+
     mudar_estado("jogo")
 
 
