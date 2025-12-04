@@ -36,6 +36,29 @@ class SistemaJogo:
         )
         self.historico_jogo.append(texto)
 
+    def _listar_saves_validos(self):
+        """Retorna APENAS saves reais do jogo (ignora jsons que não são saves)."""
+        saves = []
+        for f in os.listdir():
+            if not f.endswith(".json"):
+                continue
+
+            if f == self.temp_save_file:
+                continue  # ignora o save temporário
+
+            try:
+                with open(f, "r", encoding="utf-8") as arq:
+                    data = json.load(arq)
+
+                # Só é save válido se contém TODAS as chaves abaixo:
+                if all(k in data for k in ("bioma", "ano", "mes", "plantas", "herbivoros", "carnivoros")):
+                    saves.append(f)
+
+            except:
+                pass  # arquivo inválido → não é save do jogo
+
+        return saves
+
     # ============================================================
     # ========================= SALVAR ============================
     # ============================================================
@@ -82,10 +105,7 @@ class SistemaJogo:
         # =====================================================
 
         # Filtrar apenas saves do jogo (evita contar configs)
-        saves = [
-            f for f in os.listdir()
-            if f.endswith(".json") and "save" in f.lower()
-        ]
+        saves = self._listar_saves_validos()
 
         # -----------------------------------------------------
         # LIMITE DE 3 SAVES -> criar temporário
