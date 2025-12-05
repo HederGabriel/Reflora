@@ -187,3 +187,27 @@ class SistemaJogo:
 
         print(f"[Carregar] Save carregado: {arquivo}")
         return True
+
+    # ============================================================
+    # ========================= Histórico ========================
+    # ============================================================
+    def adicionar_ao_historico(self):
+        """Adiciona uma entrada com o estado atual do ecossistema."""
+        if not self.ecossistema:
+            return
+
+        e = self.ecossistema
+        linha = f"Ano {e.ano}, Mês {e.mes} | Plantas {e.plantas} | Herbívoros {sum(h.quantidade for h in e.herbivoros.values())} | Carnívoros {sum(c.quantidade for c in e.carnivoros.values())}"
+
+        # Salva dentro do próprio ecossistema
+        if not hasattr(e, "historico"):
+            e.historico = []
+
+        e.historico.append(linha)
+
+    def mostrar_historico(self):
+        if not self.historico_jogo:
+            print("Nenhum histórico ainda.")
+        else:
+            for linha in self.historico_jogo:
+                print(linha)

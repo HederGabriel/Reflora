@@ -55,6 +55,11 @@ modal_slot = None
 slots = []
 slots_sub = []
 
+# histórico
+historico_ativo = False
+historico_saves = []  # lista de SlotSave para o histórico
+scroll_historico = 0
+
 # ------------------------------------------------------
 # AUX: segurança ao desenhar jogo
 # ------------------------------------------------------
@@ -257,7 +262,6 @@ def salvar_jogo_com_enter():
         alerta_nome_vazio = True
         return
 
-    # DEBUG antes do salvar
     destino_rel = f"{nome}.json"
     destino_abs = os.path.abspath(destino_rel)
     arquivos_json = [f for f in os.listdir() if f.endswith(".json")]
@@ -403,6 +407,39 @@ def cancelar_substituir():
 
 # botão cancelar na tela de substituição — declarado global para ser tratado no loop de eventos
 btn_cancel_substituir = Button((SCREEN_W//2 - 100, 500, 200, 50), "Cancelar", BIG, callback=cancelar_substituir)
+
+# ------------------------------------------------------
+# Historico
+# ------------------------------------------------------
+
+def draw_historico(scroll=0):
+    """Desenha o histórico do save atual."""
+    # Fundo
+    screen.fill((30, 30, 30))
+
+    # Título
+    font_titulo = pygame.font.SysFont(None, 48)
+    titulo = font_titulo.render("Histórico do Jogo", True, (255, 255, 255))
+    screen.blit(titulo, (SCREEN_W//2 - titulo.get_width()//2, 20))
+
+    # Botão voltar
+    button_voltar_saves.draw(screen)
+
+    # Histórico
+    font = pygame.font.SysFont(None, 32)
+    y_inicio = 100 + scroll
+
+    # Pega o histórico do save atual
+    historico = getattr(sistema.ecossistema, "historico", [])
+
+    if not historico:
+        texto = font.render("Nenhuma ação registrada ainda.", True, (200, 200, 200))
+        screen.blit(texto, (50, y_inicio))
+    else:
+        for linha in historico:
+            texto = font.render(linha, True, (200, 200, 200))
+            screen.blit(texto, (50, y_inicio))
+            y_inicio += 40  # espaçamento entre linhas
 
 # ------------------------------------------------------
 # BOTÕES (originais)
@@ -588,8 +625,42 @@ def draw_jogo():
     return rects
 
 # ------------------------------------------------------
+# FUNÇÃO PARA DESENHAR O HISTÓRICO DO JOGO ATUAL
+# ------------------------------------------------------
+def draw_historico(scroll=0):
+    """Desenha o histórico do save atual."""
+    # Fundo
+    screen.fill((30, 30, 30))
+
+    # Título
+    font_titulo = pygame.font.SysFont(None, 48)
+    titulo = font_titulo.render("Histórico do Jogo", True, (255, 255, 255))
+    screen.blit(titulo, (SCREEN_W//2 - titulo.get_width()//2, 20))
+
+    # Botão voltar
+    button_voltar_saves.draw(screen)
+
+    # Histórico
+    font = pygame.font.SysFont(None, 32)
+    y_inicio = 100 + scroll
+
+    # Pega o histórico do save atual
+    historico = getattr(sistema.ecossistema, "historico", [])
+
+    if not historico:
+        texto = font.render("Nenhuma ação registrada ainda.", True, (200, 200, 200))
+        screen.blit(texto, (50, y_inicio))
+    else:
+        for linha in historico:
+            texto = font.render(linha, True, (200, 200, 200))
+            screen.blit(texto, (50, y_inicio))
+            y_inicio += 40  # espaçamento entre linhas
+
+
+# ------------------------------------------------------
 # LOOP PRINCIPAL
 # ------------------------------------------------------
+scroll_historico = 0  # deslocamento vertical para histórico
 running = True
 while running:
     for ev in pygame.event.get():
@@ -614,7 +685,7 @@ while running:
             continue
 
         # eventos por estado / tela
-        if ev.type in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONDOWN):
+        if ev.type in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONDOWN, pygame.MOUSEWHEEL):
             if estado == "menu":
                 for b in buttons_menu:
                     b.handle_event(ev)
@@ -657,21 +728,25 @@ while running:
                             elif act == "Salvar":
                                 salvar_jogo()
                             elif act == "Histórico":
-                                pass
+                                scroll_historico = 0  # reset scroll ao abrir histórico
+                                button_voltar_saves.callback = lambda: mudar_estado("jogo")
+                                mudar_estado("historico")
+            elif estado == "historico":
+                button_voltar_saves.handle_event(ev)
+                if ev.type == pygame.MOUSEWHEEL:
+                    scroll_historico += ev.y * 30  # velocidade do scroll
             elif estado == "sair_confirm":
                 button_sair_sim.handle_event(ev)
                 button_sair_nao.handle_event(ev)
             elif estado == "substituir_save":
                 for s in slots_sub:
                     s.handle_event(ev)
-                # tratar o botão cancelar global (tem que receber eventos)
                 btn_cancel_substituir.handle_event(ev)
 
     # DESENHO DAS TELAS
     if digitando_nome_save:
         draw_input_save()
     elif modal_ativo:
-        # desenha tela de fundo da tela atual e modal por cima
         if estado == "lista_saves":
             draw_lista_saves()
         elif estado == "substituir_save":
@@ -687,6 +762,8 @@ while running:
         draw_lista_saves()
     elif estado == "jogo":
         draw_jogo()
+    elif estado == "historico":
+        draw_historico(scroll=scroll_historico)
     elif estado == "sair_confirm":
         draw_sair_confirm()
     elif estado == "substituir_save":

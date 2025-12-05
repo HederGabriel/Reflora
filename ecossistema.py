@@ -7,13 +7,13 @@ from biomas import (
 )
 from animais import Herbivoro, Carnivoro
 
-
 class Ecossistema:
     def __init__(self, bioma):
         self.bioma = bioma
         self.mes = 1
         self.ano = 1
 
+        # Configuração inicial do bioma
         if bioma == "Amazônia":
             config = configurar_amazonia()
         elif bioma == "Cerrado":
@@ -35,6 +35,12 @@ class Ecossistema:
             for nome, info in config["carnivoros"].items()
         }
 
+        # 🔹 Histórico de ações
+        self.historico = []
+
+    # --------------------------------------------------
+    # Adicionar elementos
+    # --------------------------------------------------
     def adicionar_elementos(self, tipo):
         if tipo == "plantas":
             self.plantas += random.randint(150, 250)
@@ -45,28 +51,49 @@ class Ecossistema:
             for c in self.carnivoros.values():
                 c.quantidade += random.randint(1, 3)
 
+    # --------------------------------------------------
+    # Simular passagem de mês
+    # --------------------------------------------------
     def simular_mes(self):
         self.mes += 1
         if self.mes > 12:
             self.mes = 1
             self.ano += 1
 
+        # Crescimento de plantas
         self.plantas += random.randint(50, 100)
         self.plantas = max(0, min(self.plantas, 1000))
 
+        # Herbívoros consomem plantas
         for herbivoro in self.herbivoros.values():
             self.plantas = herbivoro.consumir(self.plantas)
 
+        # Carnívoros consomem herbívoros
+        total_herbivoros = sum(h.quantidade for h in self.herbivoros.values())
         for carnivoro in self.carnivoros.values():
-            total = sum(h.quantidade for h in self.herbivoros.values())
-            restos = carnivoro.consumir(total)
+            restos = carnivoro.consumir(total_herbivoros)
             for herbivoro in self.herbivoros.values():
                 if restos <= 0:
                     break
-                loss = min(herbivoro.quantidade, restos)
-                herbivoro.quantidade -= loss
-                restos -= loss
+                perda = min(herbivoro.quantidade, restos)
+                herbivoro.quantidade -= perda
+                restos -= perda
 
+        # Reprodução e envelhecimento
         for animal in list(self.herbivoros.values()) + list(self.carnivoros.values()):
             animal.reproduzir()
             animal.envelhecer()
+
+    # --------------------------------------------------
+    # Registrar histórico de ações
+    # --------------------------------------------------
+    def registrar_historico(self, acao):
+        """Registra o estado do ecossistema após uma ação."""
+        linha = (
+            f"Ano {self.ano}, Mês {self.mes} | "
+            f"Plantas {self.plantas} | "
+            f"Herbívoros {sum(h.quantidade for h in self.herbivoros.values())} | "
+            f"Carnívoros {sum(c.quantidade for c in self.carnivoros.values())} | "
+            f"Ação: {acao}"
+        )
+        self.historico.append(linha)
