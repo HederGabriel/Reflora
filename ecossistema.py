@@ -8,7 +8,7 @@ from biomas import (
 from animais import Herbivoro, Carnivoro
 
 class Ecossistema:
-    def __init__(self, bioma):
+    def __init__(self, bioma, estado_salvo=None):  # recebe estado_salvo
         self.bioma = bioma
         self.mes = 1
         self.ano = 1
@@ -25,6 +25,7 @@ class Ecossistema:
         else:
             raise ValueError("Bioma inválido.")
 
+        # Inicializa plantas e animais
         self.plantas = config["plantas"]
         self.herbivoros = {
             nome: Herbivoro(nome, info["quantidade"], info["consumo"])
@@ -37,6 +38,25 @@ class Ecossistema:
 
         # 🔹 Histórico de ações
         self.historico = []
+
+        # Se veio estado salvo, aplica os valores
+        if estado_salvo:
+            self.ano = estado_salvo.get("ano", self.ano)
+            self.mes = estado_salvo.get("mes", self.mes)
+            self.plantas = estado_salvo.get("plantas", self.plantas)
+
+            # Atualiza quantidades de herbívoros
+            for nome, quantidade in estado_salvo.get("herbivoros", {}).items():
+                if nome in self.herbivoros:
+                    self.herbivoros[nome].quantidade = quantidade
+
+            # Atualiza quantidades de carnívoros
+            for nome, quantidade in estado_salvo.get("carnivoros", {}).items():
+                if nome in self.carnivoros:
+                    self.carnivoros[nome].quantidade = quantidade
+
+            # Histórico do save
+            self.historico = estado_salvo.get("historico", []).copy()
 
     # --------------------------------------------------
     # Adicionar elementos

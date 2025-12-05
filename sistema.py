@@ -75,6 +75,9 @@ class SistemaJogo:
         if not self.ecossistema:
             return False
 
+        # Sincroniza histórico antes de salvar
+        self.historico_jogo = getattr(self.ecossistema, "historico", [])
+
         e = self.ecossistema
 
         # dados do save
@@ -153,7 +156,6 @@ class SistemaJogo:
     # ========================= CARREGAR ==========================
     # ============================================================
     def carregar(self, arquivo=None):
-
         if not arquivo or not os.path.exists(arquivo):
             print("Erro ao carregar: arquivo inexistente.")
             return False
@@ -161,25 +163,12 @@ class SistemaJogo:
         with open(arquivo, "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        # criar ecossistema a partir do save
-        self.ecossistema = Ecossistema(data["bioma"])
+        # criar ecossistema a partir do save, passando todo o estado salvo
+        self.ecossistema = Ecossistema(bioma=data["bioma"], estado_salvo=data)
         e = self.ecossistema
 
-        e.ano = data["ano"]
-        e.mes = data["mes"]
-        e.plantas = data["plantas"]
-
-        # restaurar animais
-        for nome, qtd in data["herbivoros"].items():
-            if nome in e.herbivoros:
-                e.herbivoros[nome].quantidade = qtd
-
-        for nome, qtd in data["carnivoros"].items():
-            if nome in e.carnivoros:
-                e.carnivoros[nome].quantidade = qtd
-
-        # histórico
-        self.historico_jogo = data.get("historico", [])
+        # sincroniza histórico do sistema com o do ecossistema
+        self.historico_jogo = e.historico.copy()
 
         # marcar como save carregado
         self.current_save_file = arquivo
@@ -199,7 +188,6 @@ class SistemaJogo:
         e = self.ecossistema
         linha = f"Ano {e.ano}, Mês {e.mes} | Plantas {e.plantas} | Herbívoros {sum(h.quantidade for h in e.herbivoros.values())} | Carnívoros {sum(c.quantidade for c in e.carnivoros.values())}"
 
-        # Salva dentro do próprio ecossistema
         if not hasattr(e, "historico"):
             e.historico = []
 

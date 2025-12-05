@@ -414,22 +414,17 @@ btn_cancel_substituir = Button((SCREEN_W//2 - 100, 500, 200, 50), "Cancelar", BI
 
 def draw_historico(scroll=0):
     """Desenha o histórico do save atual."""
-    # Fundo
     screen.fill((30, 30, 30))
 
-    # Título
     font_titulo = pygame.font.SysFont(None, 48)
     titulo = font_titulo.render("Histórico do Jogo", True, (255, 255, 255))
     screen.blit(titulo, (SCREEN_W//2 - titulo.get_width()//2, 20))
 
-    # Botão voltar
     button_voltar_saves.draw(screen)
 
-    # Histórico
     font = pygame.font.SysFont(None, 32)
     y_inicio = 100 + scroll
 
-    # Pega o histórico do save atual
     historico = getattr(sistema.ecossistema, "historico", [])
 
     if not historico:
@@ -439,7 +434,7 @@ def draw_historico(scroll=0):
         for linha in historico:
             texto = font.render(linha, True, (200, 200, 200))
             screen.blit(texto, (50, y_inicio))
-            y_inicio += 40  # espaçamento entre linhas
+            y_inicio += 40
 
 # ------------------------------------------------------
 # BOTÕES (originais)
