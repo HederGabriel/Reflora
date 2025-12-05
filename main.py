@@ -409,34 +409,6 @@ def cancelar_substituir():
 btn_cancel_substituir = Button((SCREEN_W//2 - 100, 500, 200, 50), "Cancelar", BIG, callback=cancelar_substituir)
 
 # ------------------------------------------------------
-# Historico
-# ------------------------------------------------------
-
-def draw_historico(scroll=0):
-    """Desenha o histórico do save atual."""
-    screen.fill((30, 30, 30))
-
-    font_titulo = pygame.font.SysFont(None, 48)
-    titulo = font_titulo.render("Histórico do Jogo", True, (255, 255, 255))
-    screen.blit(titulo, (SCREEN_W//2 - titulo.get_width()//2, 20))
-
-    button_voltar_saves.draw(screen)
-
-    font = pygame.font.SysFont(None, 32)
-    y_inicio = 100 + scroll
-
-    historico = getattr(sistema.ecossistema, "historico", [])
-
-    if not historico:
-        texto = font.render("Nenhuma ação registrada ainda.", True, (200, 200, 200))
-        screen.blit(texto, (50, y_inicio))
-    else:
-        for linha in historico:
-            texto = font.render(linha, True, (200, 200, 200))
-            screen.blit(texto, (50, y_inicio))
-            y_inicio += 40
-
-# ------------------------------------------------------
 # BOTÕES (originais)
 # ------------------------------------------------------
 BUTTON_WIDTH, BUTTON_HEIGHT = 220, 60
@@ -620,36 +592,65 @@ def draw_jogo():
     return rects
 
 # ------------------------------------------------------
-# FUNÇÃO PARA DESENHAR O HISTÓRICO DO JOGO ATUAL
+# Historico
 # ------------------------------------------------------
+
 def draw_historico(scroll=0):
-    """Desenha o histórico do save atual."""
-    # Fundo
-    screen.fill((30, 30, 30))
+    """Desenha o histórico do save atual no estilo claro do Reflora, com textos centralizados e espaçamento extra."""
+    # Fundo claro (igual draw_jogo)
+    screen.fill((220, 255, 220))
 
     # Título
-    font_titulo = pygame.font.SysFont(None, 48)
-    titulo = font_titulo.render("Histórico do Jogo", True, (255, 255, 255))
-    screen.blit(titulo, (SCREEN_W//2 - titulo.get_width()//2, 20))
+    font_titulo = pygame.font.SysFont("Arial", 48, bold=True)
+    titulo = font_titulo.render("Histórico do Jogo", True, (0, 0, 0))
+    screen.blit(titulo, (SCREEN_W // 2 - titulo.get_width() // 2, 20))
 
     # Botão voltar
     button_voltar_saves.draw(screen)
 
-    # Histórico
-    font = pygame.font.SysFont(None, 32)
-    y_inicio = 100 + scroll
+    # Fonte para histórico
+    font = pygame.font.SysFont("Consolas", 26)
+    padding_y = 8
+    spacing = 10  # espaçamento mínimo entre cada ação
+    line_height = font.get_height() + padding_y * 2 + spacing
 
-    # Pega o histórico do save atual
     historico = getattr(sistema.ecossistema, "historico", [])
 
     if not historico:
-        texto = font.render("Nenhuma ação registrada ainda.", True, (200, 200, 200))
-        screen.blit(texto, (50, y_inicio))
+        # Mensagem centralizada no meio da tela
+        texto = font.render("Nenhuma ação registrada ainda.", True, (0, 0, 0))
+        screen.blit(texto, ((SCREEN_W - texto.get_width()) // 2,
+                            (SCREEN_H - texto.get_height()) // 2))
     else:
-        for linha in historico:
-            texto = font.render(linha, True, (200, 200, 200))
-            screen.blit(texto, (50, y_inicio))
-            y_inicio += 40  # espaçamento entre linhas
+        y_inicio = 100 + scroll
+        for i, linha in enumerate(historico):
+            # Cor de fundo alternada
+            bg_color = (245, 245, 245) if i % 2 == 0 else (235, 235, 235)
+
+            # Retângulo arredondado
+            rect = pygame.Rect(40, y_inicio, SCREEN_W - 80, font.get_height() + padding_y * 2)
+            pygame.draw.rect(screen, bg_color, rect, border_radius=8)
+
+            # Barra lateral colorida
+            if "Plantas" in linha:
+                barra_color = (180, 230, 180)
+            elif "Herbívoros" in linha:
+                barra_color = (180, 210, 255)
+            elif "Carnívoros" in linha:
+                barra_color = (255, 180, 180)
+            else:
+                barra_color = (255, 225, 180)
+
+            pygame.draw.rect(screen, barra_color, (42, y_inicio + 5, 10, font.get_height() + padding_y * 2 - 10),
+                             border_radius=5)
+
+            # Renderizar texto centralizado no retângulo
+            texto = font.render(linha, True, (0, 0, 0))
+            screen.blit(texto, (SCREEN_W // 2 - texto.get_width() // 2,
+                                y_inicio + padding_y))
+
+            # Incrementa Y com line_height + espaçamento extra
+            y_inicio += line_height
 
 
 # ------------------------------------------------------
