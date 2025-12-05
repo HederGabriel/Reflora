@@ -169,8 +169,7 @@ def carregar_slots(modo_sub=False):
             try:
                 with open(arq, "r", encoding="utf-8") as f:
                     dados = json.load(f)
-            except Exception as e:
-                print("Erro lendo save", arq, e)
+            except Exception:
                 dados = None
         slot = SlotSave(x_base + i * espacamento, 150, 260, 350, dados, arq, modo_substituir=modo_sub)
         lista.append(slot)
@@ -243,11 +242,9 @@ def salvar_jogo_com_enter():
     global tempo_alerta_salvo, digitando_nome_save
     global alerta_nome_vazio, alerta_nome_existente
 
-    print("[DEBUG] salvar_jogo_com_enter() chamado. input_nome_save repr:", repr(input_nome_save))
 
     # Proteção: não tenta salvar se não houver jogo
     if not ecossistema_ok():
-        print("[WARN] salvar_jogo_com_enter: sem ecossistema. Redirecionando para novo jogo.")
         digitando_nome_save = False
         mudar_estado("selec_bioma")
         return
@@ -258,21 +255,17 @@ def salvar_jogo_com_enter():
     nome = input_nome_save.strip()
     if nome == "":
         alerta_nome_vazio = True
-        print("[WARN] nome vazio no salvar_jogo_com_enter")
         return
 
     # DEBUG antes do salvar
     destino_rel = f"{nome}.json"
     destino_abs = os.path.abspath(destino_rel)
     arquivos_json = [f for f in os.listdir() if f.endswith(".json")]
-    print("DEBUG antes salvar -> nome:", nome, "destino_rel:", destino_rel, "arquivos:", arquivos_json, "current_save_file:", sistema.current_save_file)
 
     # tenta salvar
     sucesso = sistema.salvar(nome_save=nome)
 
-    print("DEBUG apos salvar -> sucesso:", sucesso, "save_limit_reached:", sistema.save_limit_reached, "current:", sistema.current_save_file)
     arquivos_json2 = [f for f in os.listdir() if f.endswith(".json")]
-    print("DEBUG arquivos apos salvar:", arquivos_json2)
 
     if not sucesso:
         # limite de 3 saves -> abrir tela de substituição
@@ -300,7 +293,6 @@ def salvar_jogo_com_enter():
     # Atualiza slots e vai de volta ao jogo
     abrir_lista_saves()
     mudar_estado("jogo")
-    print("[INFO] salvar_jogo_com_enter: criado e sincronizado:", sistema.current_save_file)
 
 def sair_e_salvar():
     global alerta_salvo, tempo_alerta_salvo
@@ -319,11 +311,9 @@ def sair_e_salvar():
 def substituir_save(alvo):
     global nome_save_atual, modal_ativo, modal_slot, slots_sub, nome_digitado_para_save
 
-    print("[DEBUG] substituir_save: iniciado para alvo:", alvo)
 
     tmp = "saveJogo.json"
     if not os.path.exists(tmp):
-        print("[ERROR] substituir_save: tmp saveJogo.json não encontrado.")
         abrir_substituir()
         return
 
@@ -341,30 +331,24 @@ def substituir_save(alvo):
         #    removemos esse novo_nome para evitar duplicatas.
         if os.path.exists(novo_nome) and os.path.abspath(novo_nome) != os.path.abspath(alvo):
             os.remove(novo_nome)
-            print(f"[DEBUG] substituir_save: removido arquivo com novo nome existente {novo_nome}")
 
         # 2) Remover o arquivo do slot clicado (alvo) — é o que o usuário escolheu para ser trocado
         if os.path.exists(alvo):
             os.remove(alvo)
-            print(f"[DEBUG] substituir_save: removido arquivo do slot clicado {alvo}")
 
         # 3) Mover o temporário para o novo nome (atomicamente)
         os.replace(tmp, novo_nome)
-        print(f"[DEBUG] substituir_save: saveJogo.json movido para {novo_nome}")
 
         # 4) Carregar o novo save e sincronizar estado
         if sistema.carregar(novo_nome):
             sistema.current_save_file = novo_nome
             nome_save_atual = nome_digitado
             sistema.save_limit_reached = False
-            print(f"[DEBUG] substituir_save: carregado e sincronizado -> {novo_nome}")
         else:
-            print("[ERROR] substituir_save: falha ao carregar o save substituído.")
             abrir_lista_saves()
             return
 
     except Exception as e:
-        print("[ERROR] substituir_save: exceção durante substituição:", e)
         sistema.save_limit_reached = False
         # tentar limpar temporário se ainda existir
         try:
@@ -390,7 +374,6 @@ def substituir_save(alvo):
     alerta_salvo = True
     tempo_alerta_salvo = pygame.time.get_ticks()
 
-    print("[DEBUG] substituir_save: finalizado com sucesso. Voltando ao jogo.")
 
     mudar_estado("jogo")
 
@@ -398,11 +381,9 @@ def substituir_save(alvo):
 def cancelar_substituir():
     global nome_save_atual, modal_ativo, modal_slot
 
-    print("[DEBUG] cancelar_substituir: iniciado")
 
     # 1. Se existe save temporário → carregar ele
     if os.path.exists("saveJogo.json"):
-        print("[DEBUG] saveJogo encontrado. Carregando antes de apagar...")
         if sistema.carregar("saveJogo.json"):
             nome_save_atual = None  # não há save associado
             sistema.current_save_file = None
@@ -410,17 +391,14 @@ def cancelar_substituir():
         # 2. Apaga o save temporário
         try:
             os.remove("saveJogo.json")
-            print("[DEBUG] saveJogo.json removido.")
-        except Exception as e:
-            print("[DEBUG] erro ao remover saveJogo.json:", e)
-
+        except Exception:
+            pass
     # 3. Resetar flags
     sistema.save_limit_reached = False
     modal_ativo = False
     modal_slot = None
 
     # 4. Voltar ao jogo
-    print("[DEBUG] cancelar_substituir: finalizado. Voltando ao jogo.")
     mudar_estado("jogo")
 
 # botão cancelar na tela de substituição — declarado global para ser tratado no loop de eventos
