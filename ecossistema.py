@@ -8,107 +8,167 @@ from biomas import (
 from animais import Herbivoro, Carnivoro
 
 class Ecossistema:
-    def __init__(self, bioma, estado_salvo=None):  # recebe estado_salvo
+    def __init__(self, bioma, estado_salvo=None):
         self.bioma = bioma
         self.mes = 1
         self.ano = 1
 
-        # Configuração inicial do bioma
+        # Configuração inicial por bioma + capacidade de plantas
         if bioma == "Amazônia":
             config = configurar_amazonia()
+            self.capacidade_plantas = 3500
         elif bioma == "Cerrado":
             config = configurar_cerrado()
+            self.capacidade_plantas = 2500
         elif bioma == "Pantanal":
             config = configurar_pantanal()
+            self.capacidade_plantas = 3000
         elif bioma == "Caatinga":
             config = configurar_caatinga()
+            self.capacidade_plantas = 1800
         else:
             raise ValueError("Bioma inválido.")
 
-        # Inicializa plantas e animais
-        self.plantas = config["plantas"]
+        # Plantas
+        self.plantas = int(config.get("plantas", 0))
+
+        # Animais
         self.herbivoros = {
-            nome: Herbivoro(nome, info["quantidade"], info["consumo"])
-            for nome, info in config["herbivoros"].items()
+            n: Herbivoro(n, d["quantidade"], d["consumo"])
+            for n, d in config.get("herbivoros", {}).items()
         }
         self.carnivoros = {
-            nome: Carnivoro(nome, info["quantidade"], info["consumo"])
-            for nome, info in config["carnivoros"].items()
+            n: Carnivoro(n, d["quantidade"], d["consumo"])
+            for n, d in config.get("carnivoros", {}).items()
         }
 
-        # 🔹 Histórico de ações
+        # Histórico
         self.historico = []
 
-        # Se veio estado salvo, aplica os valores
+        # Roda estado salvo se houver
         if estado_salvo:
             self.ano = estado_salvo.get("ano", self.ano)
             self.mes = estado_salvo.get("mes", self.mes)
             self.plantas = estado_salvo.get("plantas", self.plantas)
 
-            # Atualiza quantidades de herbívoros
             for nome, quantidade in estado_salvo.get("herbivoros", {}).items():
                 if nome in self.herbivoros:
-                    self.herbivoros[nome].quantidade = quantidade
+                    self.herbivoros[nome].quantidade = int(quantidade)
 
-            # Atualiza quantidades de carnívoros
             for nome, quantidade in estado_salvo.get("carnivoros", {}).items():
                 if nome in self.carnivoros:
-                    self.carnivoros[nome].quantidade = quantidade
+                    self.carnivoros[nome].quantidade = int(quantidade)
 
-            # Histórico do save
             self.historico = estado_salvo.get("historico", []).copy()
 
-    # --------------------------------------------------
-    # Adicionar elementos
-    # --------------------------------------------------
-    def adicionar_elementos(self, tipo):
-        if tipo == "plantas":
-            self.plantas += random.randint(150, 250)
-        elif tipo == "herbivoros":
-            for h in self.herbivoros.values():
-                h.quantidade += random.randint(15, 40)
-        elif tipo == "carnivoros":
-            for c in self.carnivoros.values():
-                c.quantidade += random.randint(1, 3)
-
-    # --------------------------------------------------
+    # -------------------------------------------
     # Simular passagem de mês
-    # --------------------------------------------------
+    # -------------------------------------------
     def simular_mes(self):
+
+        # Avança tempo
         self.mes += 1
         if self.mes > 12:
             self.mes = 1
             self.ano += 1
 
-        # Crescimento de plantas
-        self.plantas += random.randint(50, 100)
-        self.plantas = max(0, min(self.plantas, 1000))
+        # ------------------------------------------------------
+        # **1) Plantas NÃO crescem naturalmente mais**
+        # (linha removida)
+        # ------------------------------------------------------
 
-        # Herbívoros consomem plantas
-        for herbivoro in self.herbivoros.values():
-            self.plantas = herbivoro.consumir(self.plantas)
+        # ------------------------------------------------------
+        # 2) Herbívoros comem
+        # ------------------------------------------------------
+        for h in self.herbivoros.values():
+            self.plantas = h.consumir(self.plantas)
 
-        # Carnívoros consomem herbívoros
-        total_herbivoros = sum(h.quantidade for h in self.herbivoros.values())
-        for carnivoro in self.carnivoros.values():
-            restos = carnivoro.consumir(total_herbivoros)
-            for herbivoro in self.herbivoros.values():
-                if restos <= 0:
-                    break
-                perda = min(herbivoro.quantidade, restos)
-                herbivoro.quantidade -= perda
-                restos -= perda
+        # ------------------------------------------------------
+        # 3) Herbívoros reproduzem
+        # ------------------------------------------------------
+        for h in self.herbivoros.values():
+            h.reproduzir()
 
-        # Reprodução e envelhecimento
-        for animal in list(self.herbivoros.values()) + list(self.carnivoros.values()):
-            animal.reproduzir()
-            animal.envelhecer()
+        # ------------------------------------------------------
+        # 4) Herbívoros envelhecem
+        # ------------------------------------------------------
+        for h in self.herbivoros.values():
+            h.envelhecer()
 
-    # --------------------------------------------------
-    # Registrar histórico de ações
-    # --------------------------------------------------
+        # ------------------------------------------------------
+        # 5) Carnívoros caçam herbívoros (CORRIGIDO + BALANCEADO)
+        # ------------------------------------------------------
+        total_herb = sum(h.quantidade for h in self.herbivoros.values())
+
+        for c in self.carnivoros.values():
+
+            if c.quantidade <= 0:
+                continue
+
+            # necessidade alimentar reduzida → 50%
+            necessidade = int(c.quantidade * (c.consumo * 0.5))
+
+            # eficiência aumentada → 85%
+            eficiencia_predador = 0.85
+
+            presas_disponiveis = total_herb
+
+            presas_capturadas = min(necessidade, presas_disponiveis)
+            presas_efetivas = int(presas_capturadas * eficiencia_predador)
+
+            # distribuição proporcional
+            if presas_efetivas > 0:
+                restantes = presas_efetivas
+                especies = list(self.herbivoros.values())
+                total_atual = total_herb
+
+                for h in especies:
+                    if restantes <= 0: break
+                    if total_atual <= 0: break
+
+                    proporcao = h.quantidade / total_atual if total_atual > 0 else 0
+                    perdas = int(round(presas_efetivas * proporcao))
+                    perdas = min(perdas, h.quantidade, restantes)
+
+                    h.quantidade -= perdas
+                    restantes -= perdas
+                    total_atual -= perdas
+
+                # caso sobrem presas
+                if restantes > 0:
+                    for h in especies:
+                        if restantes <= 0:
+                            break
+                        retirar = min(h.quantidade, restantes)
+                        h.quantidade -= retirar
+                        restantes -= retirar
+
+                total_herb = sum(h.quantidade for h in self.herbivoros.values())
+
+            # fome gradual
+            if presas_efetivas < necessidade:
+                c.fome = getattr(c, "fome", 0) + 1
+            else:
+                c.fome = 0
+
+            if c.fome >= 3:
+                c.quantidade = max(0, c.quantidade - 1)
+                c.fome = 0
+
+        # ------------------------------------------------------
+        # 6) Carnívoros reproduzem
+        # ------------------------------------------------------
+        for c in self.carnivoros.values():
+            c.reproduzir()
+
+        # ------------------------------------------------------
+        # 7) Carnívoros envelhecem
+        # ------------------------------------------------------
+        for c in self.carnivoros.values():
+            c.envelhecer()
+
+    # -------------------------------------------
     def registrar_historico(self, acao):
-        """Registra o estado do ecossistema após uma ação."""
         linha = (
             f"Ano {self.ano}, Mês {self.mes} | "
             f"Plantas {self.plantas} | "

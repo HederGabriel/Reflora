@@ -3,6 +3,7 @@ import pygame
 import sys
 import os
 import json
+import random
 from interface_pygame import Button, centered_text
 from sistema import SistemaJogo
 
@@ -193,10 +194,16 @@ def escolher_bioma(i):
     mudar_estado("confirma_bioma")
 
 def confirmar_bioma_final():
-    global criando_novo_jogo
+    global criando_novo_jogo, nome_save_atual
     criando_novo_jogo = True
+
+    # limpar save anterior
+    sistema.current_save_file = None
+    nome_save_atual = None
+
     sistema.confirmar_bioma(sistema.escolher_bioma(bioma_selecionado))
     mudar_estado("jogo")
+
 
 def abrir_lista_saves():
     global estado, slots
@@ -673,7 +680,7 @@ while running:
                 input_nome_save += ev.unicode
             continue
 
-        # modal ativo: capturar botões do modal
+        # modal ativo
         if modal_ativo:
             botoes_modal = draw_modal()
             for b in botoes_modal:
@@ -685,10 +692,12 @@ while running:
             if estado == "menu":
                 for b in buttons_menu:
                     b.handle_event(ev)
+
             elif estado == "selec_bioma":
                 for b in buttons_bioma:
                     b.handle_event(ev)
                 button_cancelar_bioma.handle_event(ev)
+
             elif estado == "confirma_bioma":
                 if ev.type == pygame.MOUSEBUTTONDOWN:
                     x, y = ev.pos
@@ -696,44 +705,78 @@ while running:
                         confirmar_bioma_final()
                     if SCREEN_W//2 + 20 <= x <= SCREEN_W//2 + 140 and 500 <= y <= 550:
                         mudar_estado("selec_bioma")
+
             elif estado == "lista_saves":
                 for s in slots:
                     s.handle_event(ev)
                 button_voltar_saves.handle_event(ev)
+
             elif estado == "jogo":
                 rects = draw_jogo()
                 button_sair_jogo.handle_event(ev)
+
                 if ev.type == pygame.MOUSEBUTTONDOWN:
                     for r, act in rects:
                         if r.collidepoint(ev.pos):
+
+                            # -----------------------------------------
+                            # AÇÕES DO ECOSSISTEMA (ajustadas ao novo Ecossistema)
+                            # -----------------------------------------
+
+                            # Proteção: só operar se houver ecossistema carregado
+                            if not ecossistema_ok():
+                                # não há jogo carregado: forçar retorno ao menu de seleção
+                                mudar_estado("selec_bioma")
+                                break
+
+                            # obter referência curta
+                            eco = sistema.ecossistema
+
                             if act == "Plantar Vegetação":
-                                sistema.ecossistema.adicionar_elementos("plantas")
+                                # Plantar aumenta pouco, mas de forma útil para recuperar bioma.
+                                aumento = random.randint(60, 120)  # antes 100 fixo
+                                eco.plantas = min(eco.capacidade_plantas, eco.plantas + aumento)
+
                                 sistema.adicionar_ao_historico()
-                                sistema.ecossistema.simular_mes()
+                                eco.simular_mes()
+
                             elif act == "Introduzir Herbívoros":
-                                sistema.ecossistema.adicionar_elementos("herbivoros")
+                                # Herbívoros têm baixo impacto → incremento suave
+                                for h in eco.herbivoros.values():
+                                    h.quantidade += random.randint(3, 6)  # antes era +5 fixo
+
                                 sistema.adicionar_ao_historico()
-                                sistema.ecossistema.simular_mes()
+                                eco.simular_mes()
+
                             elif act == "Introduzir Carnívoros":
-                                sistema.ecossistema.adicionar_elementos("carnivoros")
+                                # Predadores têm impacto forte → adicionar pouquíssimos
+                                for c in eco.carnivoros.values():
+                                    c.quantidade += random.randint(1, 2)  # antes +2 fixo (muito forte)
+
                                 sistema.adicionar_ao_historico()
-                                sistema.ecossistema.simular_mes()
+                                eco.simular_mes()
+
                             elif act == "Não Fazer Nada":
                                 sistema.adicionar_ao_historico()
                                 sistema.ecossistema.simular_mes()
+
                             elif act == "Salvar":
                                 salvar_jogo()
+
                             elif act == "Histórico":
-                                scroll_historico = 0  # reset scroll ao abrir histórico
+                                scroll_historico = 0
                                 button_voltar_saves.callback = lambda: mudar_estado("jogo")
                                 mudar_estado("historico")
+
             elif estado == "historico":
                 button_voltar_saves.handle_event(ev)
                 if ev.type == pygame.MOUSEWHEEL:
-                    scroll_historico += ev.y * 30  # velocidade do scroll
+                    scroll_historico += ev.y * 30
+
             elif estado == "sair_confirm":
                 button_sair_sim.handle_event(ev)
                 button_sair_nao.handle_event(ev)
+
             elif estado == "substituir_save":
                 for s in slots_sub:
                     s.handle_event(ev)
@@ -742,26 +785,35 @@ while running:
     # DESENHO DAS TELAS
     if digitando_nome_save:
         draw_input_save()
+
     elif modal_ativo:
         if estado == "lista_saves":
             draw_lista_saves()
         elif estado == "substituir_save":
             draw_substituir_save()
         draw_modal()
+
     elif estado == "menu":
         draw_menu()
+
     elif estado == "selec_bioma":
         draw_selec_bioma()
+
     elif estado == "confirma_bioma":
         draw_confirma_bioma()
+
     elif estado == "lista_saves":
         draw_lista_saves()
+
     elif estado == "jogo":
         draw_jogo()
+
     elif estado == "historico":
         draw_historico(scroll=scroll_historico)
+
     elif estado == "sair_confirm":
         draw_sair_confirm()
+
     elif estado == "substituir_save":
         draw_substituir_save()
 
