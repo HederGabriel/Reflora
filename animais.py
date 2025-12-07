@@ -1,4 +1,5 @@
 import random
+import math
 
 class Animal:
     def __init__(self, nome, quantidade, consumo):
@@ -29,8 +30,7 @@ class Animal:
             if random.random() < chance_morte:
                 mortes += 1
 
-        # Garantir que não mata toda a população
-        mortes = min(mortes, self.quantidade - 2)
+        mortes = min(mortes, self.quantidade)  # permite reduzir até 0
         self.quantidade -= mortes
 
 
@@ -38,36 +38,49 @@ class Animal:
 # HERBÍVOROS
 # ============================================================
 class Herbivoro(Animal):
+    def __init__(self, nome, quantidade, consumo):
+        super().__init__(nome, quantidade, consumo)
+        self.idade = 0
+        self.idade_max = random.randint(8, 12)
+
     def consumir(self, plantas_disponiveis):
         """
-        Herbívoros consomem plantas. Retorna plantas restantes.
-        Mortes por fome são muito suavizadas para evitar extinção rápida.
+        consumo_total agora usa math.ceil para evitar truncamento a zero
+        quando existem indivíduos com consumo fracionário.
+        Retorna plantas_restantes (int).
         """
-        consumo_total = int(self.quantidade * self.consumo)
-
+        # consumo total real esperado (arredondado pra cima)
+        consumo_total = math.ceil(self.quantidade * self.consumo)
         plantas_restantes = max(0, int(plantas_disponiveis) - consumo_total)
 
+        # se houve falta de plantas, calcular mortes
         if plantas_disponiveis < consumo_total and self.quantidade > 0:
-            deficit = consumo_total - int(plantas_disponiveis)
-
-            # amortecador maior: 1 morte a cada (consumo * 6) de falta
+            # déficit (float)
+            deficit = (consumo_total - int(plantas_disponiveis))
+            # amortecador que traduz déficit em mortes; mantive lógica similar,
+            # mas com divisão mais precisa e ceil para assegurar efeito quando necessário
             amortecador = max(1, int(max(1, self.consumo) * 6))
-            mortes = max(1, deficit // amortecador)
+            mortes = math.ceil(deficit / max(1, amortecador))
 
-            # não matar quase toda a população
-            mortes = min(mortes, max(0, self.quantidade - 1))
-            self.quantidade = max(0, self.quantidade - mortes)
+            # não remover mais do que existe
+            mortes = min(mortes, self.quantidade)
+            self.quantidade -= mortes
 
         return plantas_restantes
 
     def reproduzir(self):
         pares = self.quantidade // 2
         novos = 0
-        taxa = 0.22  # ligeiro aumento para recuperação
+        taxa = 0.08  # <--- reduzido de 0.22 para 0.08
         for _ in range(pares):
             if random.random() <= taxa:
                 novos += 1
         self.quantidade += novos
+
+    def envelhecer(self):
+        self.idade += 1
+        if self.idade >= self.idade_max:
+            self.quantidade = max(0, self.quantidade - 1)
 
 # ============================================================
 # CARNÍVOROS

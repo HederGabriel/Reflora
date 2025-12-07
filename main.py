@@ -62,6 +62,11 @@ historico_saves = []  # lista de SlotSave para o histórico
 scroll_historico = 0
 
 # ------------------------------------------------------
+# DELAY DO COLAPSO
+# ------------------------------------------------------
+DURACAO_COLAPSO_MS = 3000  # 3 segundos
+
+# ------------------------------------------------------
 # AUX: segurança ao desenhar jogo
 # ------------------------------------------------------
 def ecossistema_ok():
@@ -444,6 +449,17 @@ for i, lbl in enumerate(labels, start=1):
 
 button_cancelar_bioma = Button((SCREEN_W // 2 - 100, 500, 200, 50), "Cancelar", BIG, callback=lambda: mudar_estado("menu"))
 
+button_fim_menu = Button(
+    (SCREEN_W//2 - 120, 400, 240, 50),
+    "Voltar ao Menu",
+    BIG,
+    callback=lambda: mudar_estado("menu")
+)
+
+# ------------------------------------------------------
+# DESENHO DAS TELAS (originais e atualizadas)
+# ------------------------------------------------------
+
 # ------------------------------------------------------
 # MODAL (confirmar exclusão)
 # ------------------------------------------------------
@@ -478,9 +494,7 @@ def cancelar_exclusao():
     modal_ativo = False
     modal_slot = None
 
-# ------------------------------------------------------
-# DESENHO DAS TELAS (originais e atualizadas)
-# ------------------------------------------------------
+
 def draw_input_save():
     screen.fill((200, 200, 255))
     centered_text(screen, "Digite o nome do save e pressione ENTER", FONT, 100)
@@ -659,6 +673,162 @@ def draw_historico(scroll=0):
             # Incrementa Y com line_height + espaçamento extra
             y_inicio += line_height
 
+# ------------------------------------------------------
+# Telas Finais
+# ------------------------------------------------------
+if 'floresta' not in globals():
+    floresta = []
+
+    for _ in range(90):  # mais árvores
+        arvore = {
+            "x": random.randint(-100, SCREEN_W + 100),
+            "altura": random.randint(150, 300),
+            "largura": random.randint(10, 22),
+            "folha_w": random.randint(100, 180),
+            "folha_h": random.randint(80, 150),
+            "verde": random.randint(70, 140)
+        }
+        floresta.append(arvore)
+
+    floresta.sort(key=lambda a: a["altura"])
+
+def draw_floresta_fundo():
+    chao = SCREEN_H   # começa exatamente do chão da tela
+    # "base" verde para não deixar buracos
+    pygame.draw.rect(screen, (170, 230, 170), (0, SCREEN_H - 220, SCREEN_W, 240))
+
+    for a in floresta:
+        tronco_cor = (90, 60, 30)
+        folha_cor = (40, a["verde"], 40)
+
+        # Tronco
+        pygame.draw.rect(
+            screen,
+            tronco_cor,
+            (a["x"], chao - a["altura"], a["largura"], a["altura"])
+        )
+
+        # Copa
+        pygame.draw.ellipse(
+            screen,
+            folha_cor,
+            (
+                a["x"] - a["folha_w"] // 2,
+                chao - a["altura"] - (a["folha_h"] // 2),
+                a["folha_w"],
+                a["folha_h"]
+            )
+        )
+
+if 'folhas' not in globals():
+    folhas = []
+    TOTAL_FOLHAS = 12
+
+    for _ in range(TOTAL_FOLHAS):
+        folha = {
+            "y": random.randint(-100, SCREEN_H),
+
+            # Começa obrigatoriamente nas árvores
+            "x": random.choice([
+                random.randint(-60, 160),                 # área da árvore esquerda
+                random.randint(SCREEN_W - 200, SCREEN_W)  # área da árvore direita
+            ]),
+
+            "vel": random.uniform(0.5, 2.2),
+            "tam": random.randint(6, 14)
+        }
+        folhas.append(folha)
+
+def draw_fim_vitoria():
+    tronco_largura = 110
+    tronco_x_dir = SCREEN_W - 130
+    tronco_x_esq = -20
+
+    # Fundo em degradê
+    for y in range(SCREEN_H):
+        cor = 200 + int(20 * (y / SCREEN_H))
+        pygame.draw.line(screen, (cor, 255, cor), (0, y), (SCREEN_W, y))
+
+    # Floresta no fundo (nova)
+    draw_floresta_fundo()
+
+
+    # Caixa (fica abaixo das árvores)
+    faixa_rect = pygame.Rect(80, 100, SCREEN_W - 160, 300)
+    pygame.draw.rect(screen, (240, 255, 240), faixa_rect, border_radius=20)
+    pygame.draw.rect(screen, (100, 200, 100), faixa_rect, 4, border_radius=20)
+
+    # Texto
+    font_titulo = pygame.font.SysFont("Arial", 64, bold=True)
+    titulo = font_titulo.render("PARABÉNS!", True, (40, 120, 40))
+    screen.blit(titulo, (SCREEN_W//2 - titulo.get_width()//2, 170))
+
+    font_msg = pygame.font.SysFont("Arial", 30)
+    msg1 = font_msg.render("Você manteve o ecossistema saudável por 5 anos!", True, (0, 80, 0))
+    screen.blit(msg1, (SCREEN_W//2 - msg1.get_width()//2, 260))
+
+    msg2 = font_msg.render("A natureza está em equilíbrio graças a você.", True, (0, 100, 0))
+    screen.blit(msg2, (SCREEN_W//2 - msg2.get_width()//2, 300))
+
+    # Troncos (embaixo das folhas caindo)
+    pygame.draw.rect(screen, (110, 70, 30), (tronco_x_dir, -50, tronco_largura, SCREEN_H + 100))
+    pygame.draw.rect(screen, (110, 70, 30), (tronco_x_esq, -50, tronco_largura, SCREEN_H + 100))
+
+    # → FOLHAS CAINDO (MEIO)
+    for folha in folhas:
+        folha["y"] += folha["vel"]
+        folha["x"] += random.uniform(-0.3, 0.3)
+
+        if folha["y"] > SCREEN_H:
+            folha["y"] = random.randint(-100, -20)
+
+            if random.choice([True, False]):
+                folha["x"] = random.randint(-60, 160)
+            else:
+                folha["x"] = random.randint(SCREEN_W - 200, SCREEN_W)
+
+        pygame.draw.ellipse(
+            screen,
+            (100, 180, 100),
+            (folha["x"], folha["y"], folha["tam"] * 1.5, folha["tam"])
+        )
+
+    # → COPA DAS ÁRVORES (POR CIMA DE TUDO)
+    # Direita
+    pygame.draw.circle(screen, (50, 130, 50), (tronco_x_dir + 40, 40), 150)
+    pygame.draw.circle(screen, (60, 150, 60), (tronco_x_dir + 120, 90), 170)
+    pygame.draw.circle(screen, (70, 160, 70), (tronco_x_dir - 10, 140), 160)
+    pygame.draw.circle(screen, (60, 140, 60), (tronco_x_dir + 60, 200), 170)
+
+    # Esquerda
+    pygame.draw.circle(screen, (50, 130, 50), (tronco_x_esq + 70, 40), 150)
+    pygame.draw.circle(screen, (60, 150, 60), (tronco_x_esq - 20, 90), 170)
+    pygame.draw.circle(screen, (70, 160, 70), (tronco_x_esq + 120, 140), 160)
+    pygame.draw.circle(screen, (60, 140, 60), (tronco_x_esq + 40, 200), 170)
+
+    # Botão
+    button_fim_menu.rect.y = 470
+    button_fim_menu.draw(screen)
+
+def draw_fim_derrota():
+    screen.fill((255, 200, 200))
+    centered_text(screen, "Fim de Jogo", BIG, 150)
+    centered_text(screen, "O ecossistema colapsou.", FONT, 250)
+    button_fim_menu.draw(screen)
+
+
+def draw_colapso():
+    # Mostra o jogo normalmente
+    draw_jogo()
+
+    # Escurece a tela levemente
+    overlay = pygame.Surface((SCREEN_W, SCREEN_H))
+    overlay.set_alpha(120)
+    overlay.fill((0, 0, 0))
+    screen.blit(overlay, (0, 0))
+
+    msg = BIG.render("O ecossistema está colapsando...", True, (255, 200, 200))
+    screen.blit(msg, ((SCREEN_W - msg.get_width()) // 2, 300))
 
 # ------------------------------------------------------
 # LOOP PRINCIPAL
@@ -701,9 +871,9 @@ while running:
             elif estado == "confirma_bioma":
                 if ev.type == pygame.MOUSEBUTTONDOWN:
                     x, y = ev.pos
-                    if SCREEN_W//2 - 140 <= x <= SCREEN_W//2 - 20 and 500 <= y <= 550:
+                    if SCREEN_W // 2 - 140 <= x <= SCREEN_W // 2 - 20 and 500 <= y <= 550:
                         confirmar_bioma_final()
-                    if SCREEN_W//2 + 20 <= x <= SCREEN_W//2 + 140 and 500 <= y <= 550:
+                    if SCREEN_W // 2 + 20 <= x <= SCREEN_W // 2 + 140 and 500 <= y <= 550:
                         mudar_estado("selec_bioma")
 
             elif estado == "lista_saves":
@@ -719,46 +889,33 @@ while running:
                     for r, act in rects:
                         if r.collidepoint(ev.pos):
 
-                            # -----------------------------------------
-                            # AÇÕES DO ECOSSISTEMA (ajustadas ao novo Ecossistema)
-                            # -----------------------------------------
-
-                            # Proteção: só operar se houver ecossistema carregado
                             if not ecossistema_ok():
-                                # não há jogo carregado: forçar retorno ao menu de seleção
                                 mudar_estado("selec_bioma")
                                 break
 
-                            # obter referência curta
                             eco = sistema.ecossistema
 
                             if act == "Plantar Vegetação":
-                                # Plantar aumenta pouco, mas de forma útil para recuperar bioma.
-                                aumento = random.randint(60, 120)  # antes 100 fixo
+                                aumento = random.randint(60, 120)
                                 eco.plantas = min(eco.capacidade_plantas, eco.plantas + aumento)
-
                                 sistema.adicionar_ao_historico()
                                 eco.simular_mes()
 
                             elif act == "Introduzir Herbívoros":
-                                # Herbívoros têm baixo impacto → incremento suave
                                 for h in eco.herbivoros.values():
-                                    h.quantidade += random.randint(3, 6)  # antes era +5 fixo
-
+                                    h.quantidade += random.randint(3, 6)
                                 sistema.adicionar_ao_historico()
                                 eco.simular_mes()
 
                             elif act == "Introduzir Carnívoros":
-                                # Predadores têm impacto forte → adicionar pouquíssimos
                                 for c in eco.carnivoros.values():
-                                    c.quantidade += random.randint(1, 2)  # antes +2 fixo (muito forte)
-
+                                    c.quantidade += random.randint(1, 2)
                                 sistema.adicionar_ao_historico()
                                 eco.simular_mes()
 
                             elif act == "Não Fazer Nada":
                                 sistema.adicionar_ao_historico()
-                                sistema.ecossistema.simular_mes()
+                                eco.simular_mes()
 
                             elif act == "Salvar":
                                 salvar_jogo()
@@ -767,6 +924,17 @@ while running:
                                 scroll_historico = 0
                                 button_voltar_saves.callback = lambda: mudar_estado("jogo")
                                 mudar_estado("historico")
+
+                            # -----------------------------------------
+                            # VERIFICAR FIM DE JOGO
+                            # -----------------------------------------
+                            status_fim = eco.verificar_fim_jogo()
+                            if status_fim:
+                                if status_fim == "vitória":
+                                    mudar_estado("fim_vitoria")
+                                elif status_fim == "derrota":
+                                    colapso_inicio = pygame.time.get_ticks()
+                                    mudar_estado("colapso")
 
             elif estado == "historico":
                 button_voltar_saves.handle_event(ev)
@@ -782,7 +950,25 @@ while running:
                     s.handle_event(ev)
                 btn_cancel_substituir.handle_event(ev)
 
+            elif estado == "colapso":
+                # Nenhuma interação durante o colapso
+                pass
+
+            elif estado in ("fim_vitoria", "fim_derrota"):
+                # Ativa o botão "Voltar ao Menu"
+                button_fim_menu.handle_event(ev)
+
+    # ------------------------------------------------------
+    # CONTROLE DO TEMPO DE COLAPSO
+    # ------------------------------------------------------
+    if estado == "colapso" and colapso_inicio:
+        if pygame.time.get_ticks() - colapso_inicio >= DURACAO_COLAPSO_MS:
+            colapso_inicio = None
+            mudar_estado("fim_derrota")
+
+    # ------------------------------------------------------
     # DESENHO DAS TELAS
+    # ------------------------------------------------------
     if digitando_nome_save:
         draw_input_save()
 
@@ -816,6 +1002,15 @@ while running:
 
     elif estado == "substituir_save":
         draw_substituir_save()
+
+    elif estado == "colapso":
+        draw_colapso()
+
+    elif estado == "fim_vitoria":
+        draw_fim_vitoria()
+
+    elif estado == "fim_derrota":
+        draw_fim_derrota()
 
     pygame.display.update()
     clock.tick(60)
