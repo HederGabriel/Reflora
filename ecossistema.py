@@ -10,8 +10,8 @@ from animais import Herbivoro, Carnivoro
 class Ecossistema:
     def __init__(self, bioma, estado_salvo=None):
         self.bioma = bioma
-        self.mes = 11
-        self.ano = 4
+        self.mes = 1
+        self.ano = 1
 
         # Configuração inicial por bioma + capacidade de plantas
         if bioma == "Amazônia":
