@@ -24,6 +24,7 @@ sistema = SistemaJogo()
 # ------------------------------------------------------
 estado = "menu"
 estado_salvamento = None
+estado_tutorial_origem = None
 bioma_selecionado = None
 buttons_saves = []
 alerta_saves = False
@@ -49,6 +50,22 @@ button_voltar_saves = Button(
     FONT,
     callback=lambda: mudar_estado("menu")
 )
+
+# -----------------------
+# Tutorial
+# -----------------------
+tutorial_ativo = False
+tutorial_pagina = 0
+
+tutorial_textos = [
+    ["Bem-vindo ao REFLORA.", "Seu objetivo é manter o ecossistema em equilíbrio."],
+    ["As plantas são a base de toda a vida.", "Sem plantas, os herbívoros morrem."],
+    ["Os herbívoros dependem das plantas.", "População excessiva consome toda a vegetação."],
+    ["Carnívoros controlam os herbívoros.", "Sem predadores, ocorre desequilíbrio."],
+    ["Em cada turno você pode:", "• Plantar vegetação", "• Introduzir animais", "• Ou não fazer nada"],
+    ["Mantenha plantas, herbívoros e carnívoros vivos por 5 anos."]
+]
+tutorial_origem = "menu"
 
 # modal e slots
 modal_ativo = False
@@ -199,7 +216,8 @@ def escolher_bioma(i):
     mudar_estado("confirma_bioma")
 
 def confirmar_bioma_final():
-    global criando_novo_jogo, nome_save_atual
+    global criando_novo_jogo, nome_save_atual, tutorial_origem
+
     criando_novo_jogo = True
 
     # limpar save anterior
@@ -207,8 +225,12 @@ def confirmar_bioma_final():
     nome_save_atual = None
 
     sistema.confirmar_bioma(sistema.escolher_bioma(bioma_selecionado))
-    mudar_estado("jogo")
 
+    # define origem do tutorial para voltar ao jogo depois
+    tutorial_origem = "novo_jogo"
+
+    # abre a pergunta do tutorial
+    perguntar_tutorial()
 
 def abrir_lista_saves():
     global estado, slots
@@ -434,6 +456,7 @@ buttons_menu = [
     Button((SCREEN_W // 2 - 120, 220, 240, 50), "Jogar (Novo)", BIG, callback=lambda: mudar_estado("selec_bioma")),
     btn_carregar,
     Button((SCREEN_W // 2 - 120, 360, 240, 50), "Sair", BIG, callback=lambda: sys.exit()),
+    Button((SCREEN_W // 2 - 120, 420, 240, 50), "Tutorial", BIG, callback=lambda: abrir_tutorial_menu()),
 ]
 
 labels = ["Amazônia", "Cerrado", "Pantanal", "Caatinga"]
@@ -457,8 +480,111 @@ button_fim_menu = Button(
 )
 
 # ------------------------------------------------------
-# DESENHO DAS TELAS (originais e atualizadas)
+# DESENHO DAS TELAS
 # ------------------------------------------------------
+
+def draw_tutorial():
+    # Fundo em degradê verde suave (padrão REFLORA)
+    for y in range(SCREEN_H):
+        cor = 210 + int(20 * (y / SCREEN_H))
+        pygame.draw.line(screen, (cor, 250, cor), (0, y), (SCREEN_W, y))
+
+    # Caixa central
+    caixa_rect = pygame.Rect(100, 90, SCREEN_W - 200, 420)
+    pygame.draw.rect(screen, (235, 255, 235), caixa_rect, border_radius=24)
+    pygame.draw.rect(screen, (120, 200, 120), caixa_rect, 3, border_radius=24)
+
+    # Título
+    font_titulo = pygame.font.SysFont("Arial", 52, bold=True)
+    titulo = font_titulo.render("TUTORIAL", True, (30, 100, 30))
+    screen.blit(titulo, (SCREEN_W // 2 - titulo.get_width() // 2, 120))
+
+    # Texto (lista de linhas)
+    font_texto = pygame.font.SysFont("Arial", 28)
+    linhas = tutorial_textos[tutorial_pagina]
+
+    y_text = 210
+    for linha in linhas:
+        txt = font_texto.render(linha, True, (30, 90, 30))
+        screen.blit(txt, (SCREEN_W // 2 - txt.get_width() // 2, y_text))
+        y_text += 38
+
+    # Indicador de página
+    info = font_texto.render(f"{tutorial_pagina + 1} / {len(tutorial_textos)}", True, (60, 120, 60))
+    screen.blit(info, (SCREEN_W // 2 - info.get_width() // 2, 520))
+
+    # Botões padrão do jogo
+    if tutorial_pagina > 0:
+        Button((60, 540, 200, 50), "Voltar", BIG, callback=voltar_tutorial).draw(screen)
+
+    Button((SCREEN_W - 260, 540, 200, 50), "Próximo", BIG, callback=proximo_tutorial).draw(screen)
+
+
+def proximo_tutorial():
+    global tutorial_pagina, tutorial_ativo
+
+    tutorial_pagina += 1
+
+    if tutorial_pagina >= len(tutorial_textos):
+        tutorial_ativo = False
+        tutorial_pagina = 0
+        sair_tutorial()
+
+def voltar_tutorial():
+    global tutorial_pagina
+    tutorial_pagina -= 1
+    if tutorial_pagina < 0:
+        tutorial_pagina = 0
+
+def perguntar_tutorial():
+    global estado, estado_tutorial_origem
+    estado_tutorial_origem = "novo_jogo"
+    mudar_estado("pergunta_tutorial")
+
+def pular_tutorial():
+    global estado_tutorial_origem
+    estado_tutorial_origem = None
+    mudar_estado("jogo")
+
+def iniciar_tutorial():
+    mudar_estado("tutorial")
+
+def draw_pergunta_tutorial():
+    screen.fill((220, 250, 220))
+    centered_text(screen, "Deseja ver o tutorial?", BIG, 200)
+
+    btn_sim.draw(screen)
+    btn_nao.draw(screen)
+
+btn_prox = Button(
+    (SCREEN_W - 260, 520, 200, 50),
+    "Próximo",
+    BIG,
+    callback=proximo_tutorial
+)
+
+btn_voltar = Button(
+    (60, 520, 200, 50),
+    "Voltar",
+    BIG,
+    callback=voltar_tutorial
+)
+
+def abrir_tutorial_menu():
+    global tutorial_origem
+    tutorial_origem = "menu"
+    mudar_estado("tutorial")
+
+def sair_tutorial():
+    global tutorial_origem
+
+    if tutorial_origem == "menu":
+        mudar_estado("menu")
+    else:
+        mudar_estado("jogo")
+
+btn_sim = Button((SCREEN_W//2 - 120, 320, 100, 50), "Sim", BIG, callback=iniciar_tutorial)
+btn_nao = Button((SCREEN_W//2 + 20, 320, 100, 50), "Não", BIG, callback=pular_tutorial)
 
 # ------------------------------------------------------
 # MODAL (confirmar exclusão)
@@ -833,8 +959,9 @@ def draw_colapso():
 # ------------------------------------------------------
 # LOOP PRINCIPAL
 # ------------------------------------------------------
-scroll_historico = 0  # deslocamento vertical para histórico
+scroll_historico = 0
 running = True
+
 while running:
     for ev in pygame.event.get():
         if ev.type == pygame.QUIT:
@@ -850,18 +977,29 @@ while running:
                 input_nome_save += ev.unicode
             continue
 
-        # modal ativo
+        # MODAL ATIVO
         if modal_ativo:
             botoes_modal = draw_modal()
             for b in botoes_modal:
                 b.handle_event(ev)
             continue
 
-        # eventos por estado / tela
+        # EVENTOS POR ESTADO
         if ev.type in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONDOWN, pygame.MOUSEWHEEL):
+
             if estado == "menu":
                 for b in buttons_menu:
                     b.handle_event(ev)
+
+            elif estado == "pergunta_tutorial":
+                btn_sim.handle_event(ev)
+                btn_nao.handle_event(ev)
+
+            elif estado == "tutorial":
+                if ev.type in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONDOWN):
+                    btn_prox.handle_event(ev)
+                    if tutorial_pagina > 0:
+                        btn_voltar.handle_event(ev)
 
             elif estado == "selec_bioma":
                 for b in buttons_bioma:
@@ -925,9 +1063,7 @@ while running:
                                 button_voltar_saves.callback = lambda: mudar_estado("jogo")
                                 mudar_estado("historico")
 
-                            # -----------------------------------------
                             # VERIFICAR FIM DE JOGO
-                            # -----------------------------------------
                             status_fim = eco.verificar_fim_jogo()
                             if status_fim:
                                 if status_fim == "vitória":
@@ -950,25 +1086,19 @@ while running:
                     s.handle_event(ev)
                 btn_cancel_substituir.handle_event(ev)
 
-            elif estado == "colapso":
-                # Nenhuma interação durante o colapso
-                pass
-
             elif estado in ("fim_vitoria", "fim_derrota"):
-                # Ativa o botão "Voltar ao Menu"
                 button_fim_menu.handle_event(ev)
 
-    # ------------------------------------------------------
-    # CONTROLE DO TEMPO DE COLAPSO
-    # ------------------------------------------------------
+            elif estado == "colapso":
+                pass
+
+    # CONTROLE DO TEMPO DO COLAPSO
     if estado == "colapso" and colapso_inicio:
         if pygame.time.get_ticks() - colapso_inicio >= DURACAO_COLAPSO_MS:
             colapso_inicio = None
             mudar_estado("fim_derrota")
 
-    # ------------------------------------------------------
     # DESENHO DAS TELAS
-    # ------------------------------------------------------
     if digitando_nome_save:
         draw_input_save()
 
@@ -981,6 +1111,12 @@ while running:
 
     elif estado == "menu":
         draw_menu()
+
+    elif estado == "pergunta_tutorial":
+        draw_pergunta_tutorial()
+
+    elif estado == "tutorial":
+        draw_tutorial()
 
     elif estado == "selec_bioma":
         draw_selec_bioma()
