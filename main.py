@@ -11,6 +11,7 @@ BLACK = (0, 0, 0)
 GRAY = (200, 200, 200)
 
 
+# --- Classe Button: criação e interação de botões ---
 class Button:
     def __init__(self, rect, text, font, callback=None):
         self.rect = pygame.Rect(rect)
@@ -39,6 +40,7 @@ def centered_text(surf, text, font, y, color=BLACK):
     surf.blit(img, rect)
 
 
+# --- Inicialização do pygame e recursos principais ---
 pygame.init()
 
 SCREEN_W, SCREEN_H = 1000, 640
@@ -49,6 +51,7 @@ clock = pygame.time.Clock()
 FONT = pygame.font.SysFont("Arial", 20)
 BIG = pygame.font.SysFont("Arial", 32)
 
+# --- Instância do sistema de simulação do jogo ---
 sistema = SistemaJogo()
 
 # ------------------------------------------------------
@@ -124,6 +127,7 @@ def ecossistema_ok():
 # ------------------------------------------------------
 # FUNÇÕES/CLASSES PARA SLOTS VISUAIS
 # ------------------------------------------------------
+# --- Classe SlotSave: cartões visuais de saves ---
 class SlotSave:
     def __init__(self, x, y, w, h, dados, nome_arquivo, modo_substituir=False):
         self.rect = pygame.Rect(x, y, w, h)
@@ -216,6 +220,7 @@ class SlotSave:
             else:
                 self.btn_substituir.handle_event(ev)
 
+# --- Carregamento e exibição dos slots de save ---
 def carregar_slots(modo_sub=False):
     lista = []
     arquivos = [f for f in os.listdir() if f.endswith('.json') and f != "saveJogo.json"]
@@ -293,6 +298,7 @@ def iniciar_nome_save():
     alerta_nome_existente = False
     alerta_nome_vazio = False
 
+# --- Lógica de salvar jogo ---
 def salvar_jogo():
     global alerta_salvo, tempo_alerta_salvo, nome_save_atual
 
@@ -515,6 +521,7 @@ button_fim_menu = Button(
 # DESENHO DAS TELAS
 # ------------------------------------------------------
 
+# --- Renderização do tutorial ---
 def draw_tutorial():
     # Fundo em degradê verde suave (padrão REFLORA)
     for y in range(SCREEN_H):
@@ -666,6 +673,7 @@ def draw_input_save():
         warn = FONT.render("Esse nome já existe. Escolha outro.", True, (200, 0, 0))
         screen.blit(warn, (SCREEN_W//2 - warn.get_width()//2, 300))
 
+# --- Renderização do menu principal ---
 def draw_menu():
     screen.fill((120, 200, 255))
     centered_text(screen, "REFLORA", BIG, 120)
