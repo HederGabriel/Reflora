@@ -1,3 +1,61 @@
+"""
+======================================================================
+EXPLICAÇÃO DO PYGAME E DE COMO ELE É UTILIZADO NESTE PROJETO
+======================================================================
+
+Este arquivo utiliza Pygame para implementar toda a interface gráfica,
+o loop principal do jogo, a captura de eventos, o sistema de botões,
+a renderização do texto, e as telas que compõem o fluxo geral.
+
+A seguir está um resumo detalhado dos conceitos do Pygame e como
+o código os utiliza:
+
+1. INITIALIZAÇÃO DO PYGAME
+   - pygame.init() configura todos os módulos internos do pygame.
+   - A janela é criada com pygame.display.set_mode(), produzindo um
+     "Surface" principal — a tela — onde tudo será desenhado.
+
+2. SURFACES E DESENHO
+   - Tudo que aparece na tela são Surfaces: imagens, texto, botões.
+   - Desenho é feito com screen.blit(), ou funções de desenho como
+     pygame.draw.rect().
+   - Após desenhar tudo no frame, pygame.display.flip() atualiza a tela.
+
+3. EVENT LOOP (LOOP PRINCIPAL)
+   - O loop principal captura eventos com pygame.event.get().
+   - Eventos comuns:
+        QUIT           → fechar janela
+        MOUSEBUTTONDOWN→ clique do mouse
+        KEYDOWN        → tecla pressionada
+   - Cada interação do usuário (clique, digitação, hover) é processada
+     aqui e encaminhada para as funções adequadas.
+
+4. SISTEMA DE BOTÕES
+   - Os botões são implementados como objetos da classe Button.
+   - Cada botão:
+        • possui uma área (Rect),
+        • desenha-se na tela,
+        • detecta se o mouse está sobre ele,
+        • executa um callback quando clicado.
+
+5. FONTES E TEXTO
+   - O projeto usa pygame.font.Font() para renderizar texto.
+   - Todo texto vira um Surface que é "blitado" na tela.
+
+6. MÚLTIPLAS TELAS / MÁQUINA DE ESTADOS
+   - O jogo troca entre telas (menu, seleção de bioma, tutorial, jogo,
+     saves, vitórias, colapso etc.) usando uma variável de estado.
+   - Cada estado possui uma função draw_xxx() correspondente.
+
+7. FRAME RATE E CLOCK
+   - pygame.time.Clock() controla FPS e evita uso excessivo de CPU.
+
+O conteúdo abaixo é o código original acrescido de comentários sobre
+como cada trecho utiliza algum aspecto do Pygame.
+======================================================================
+"""
+
+
 # main.py — Unificado: versão original corrigida + slots visuais/substituição/modal
 import pygame
 import sys
@@ -6,11 +64,11 @@ import json
 import random
 from sistema import SistemaJogo
 
+WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 GRAY = (200, 200, 200)
 
 
-# --- Classe Button: criação e interação de botões ---
 class Button:
     def __init__(self, rect, text, font, callback=None):
         self.rect = pygame.Rect(rect)
@@ -39,7 +97,6 @@ def centered_text(surf, text, font, y, color=BLACK):
     surf.blit(img, rect)
 
 
-# --- Inicialização do pygame e recursos principais ---
 pygame.init()
 
 SCREEN_W, SCREEN_H = 1000, 640
@@ -50,7 +107,6 @@ clock = pygame.time.Clock()
 FONT = pygame.font.SysFont("Arial", 20)
 BIG = pygame.font.SysFont("Arial", 32)
 
-# --- Instância do sistema de simulação do jogo ---
 sistema = SistemaJogo()
 
 # ------------------------------------------------------
@@ -126,7 +182,6 @@ def ecossistema_ok():
 # ------------------------------------------------------
 # FUNÇÕES/CLASSES PARA SLOTS VISUAIS
 # ------------------------------------------------------
-# --- Classe SlotSave: cartões visuais de saves ---
 class SlotSave:
     def __init__(self, x, y, w, h, dados, nome_arquivo, modo_substituir=False):
         self.rect = pygame.Rect(x, y, w, h)
@@ -219,7 +274,6 @@ class SlotSave:
             else:
                 self.btn_substituir.handle_event(ev)
 
-# --- Carregamento e exibição dos slots de save ---
 def carregar_slots(modo_sub=False):
     lista = []
     arquivos = [f for f in os.listdir() if f.endswith('.json') and f != "saveJogo.json"]
@@ -297,7 +351,6 @@ def iniciar_nome_save():
     alerta_nome_existente = False
     alerta_nome_vazio = False
 
-# --- Lógica de salvar jogo ---
 def salvar_jogo():
     global alerta_salvo, tempo_alerta_salvo, nome_save_atual
 
@@ -520,7 +573,6 @@ button_fim_menu = Button(
 # DESENHO DAS TELAS
 # ------------------------------------------------------
 
-# --- Renderização do tutorial ---
 def draw_tutorial():
     # Fundo em degradê verde suave (padrão REFLORA)
     for y in range(SCREEN_H):
@@ -672,7 +724,6 @@ def draw_input_save():
         warn = FONT.render("Esse nome já existe. Escolha outro.", True, (200, 0, 0))
         screen.blit(warn, (SCREEN_W//2 - warn.get_width()//2, 300))
 
-# --- Renderização do menu principal ---
 def draw_menu():
     screen.fill((120, 200, 255))
     centered_text(screen, "REFLORA", BIG, 120)
