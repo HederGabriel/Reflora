@@ -8,7 +8,6 @@ class Animal:
         quantidade: int (indivíduos)
         consumo: float (unidades de presa/plantas por indivíduo por mês)
         """
-        self.nome = nome
         self.quantidade = int(max(0, quantidade))
         self.consumo = float(consumo)
 

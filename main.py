@@ -1,4 +1,3 @@
-# main.py — Unificado: versão original corrigida + slots visuais/substituição/modal
 import pygame
 import sys
 import os
