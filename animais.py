@@ -3,11 +3,6 @@ import math
 
 class Animal:
     def __init__(self, nome, quantidade, consumo):
-        """
-        nome: string
-        quantidade: int (indivíduos)
-        consumo: float (unidades de presa/plantas por indivíduo por mês)
-        """
         self.quantidade = int(max(0, quantidade))
         self.consumo = float(consumo)
 
@@ -21,7 +16,6 @@ class Animal:
         if self.quantidade <= 5:
             return
 
-        # Mortalidade quase simbólica
         chance_morte = 0.02  # 2% por mês
 
         mortes = 0
