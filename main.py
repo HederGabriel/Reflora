@@ -56,8 +56,8 @@ sistema = SistemaJogo()
 # VARIÁVEIS GLOBAIS (originais + extras para slots/modal)
 # ------------------------------------------------------
 pagina = "menu"
-estado_salvamento = None
-estado_tutorial_origem = None
+pagina_salvamento = None
+pagina_tutorial_origem = None
 bioma_selecionado = None
 buttons_saves = []
 alerta_saves = False
@@ -81,7 +81,7 @@ button_voltar_saves = Button(
     (SCREEN_W // 2 - 60, 550, 120, 50),
     "Voltar",
     FONT,
-    callback=lambda: mudar_estado("menu")
+    callback=lambda: mudar_pagina("menu")
 )
 
 # -----------------------
@@ -176,7 +176,7 @@ class SlotSave:
             if sistema.carregar(self.nome_arquivo):
                 global nome_save_atual, pagina
                 nome_save_atual = self.nome_arquivo.replace('.json','')
-                mudar_estado("jogo")
+                mudar_pagina("jogo")
 
     def on_apagar(self):
         global modal_ativo, modal_slot
@@ -204,7 +204,7 @@ class SlotSave:
 
                     # se não há ecossistema ainda → fluxo normal de criar novo jogo
                     if not sistema.ecossistema:
-                        mudar_estado("selec_bioma")
+                        mudar_pagina("selec_bioma")
                         return
 
                     # já há jogo em andamento, apenas criar novo save para o jogo atual
@@ -241,14 +241,14 @@ def carregar_slots(modo_sub=False):
 # ------------------------------------------------------
 # Funções do fluxo de saves (mantidas e integradas)
 # ------------------------------------------------------
-def mudar_estado(e):
+def mudar_pagina(e):
     global pagina
     pagina = e
 
 def escolher_bioma(i):
     global bioma_selecionado
     bioma_selecionado = i
-    mudar_estado("confirma_bioma")
+    mudar_pagina("confirma_bioma")
 
 def confirmar_bioma_final():
     global criando_novo_jogo, nome_save_atual, tutorial_origem
@@ -282,7 +282,7 @@ def carregar_save(arq):
     global nome_save_atual
     if sistema.carregar(arq):
         nome_save_atual = arq.replace('.json', '')
-        mudar_estado("jogo")
+        mudar_pagina("jogo")
 
 def apagar_save(arq):
     if os.path.exists(arq):
@@ -321,7 +321,7 @@ def salvar_jogo_com_enter():
     # Proteção: não tenta salvar se não houver jogo
     if not ecossistema_ok():
         digitando_nome_save = False
-        mudar_estado("selec_bioma")
+        mudar_pagina("selec_bioma")
         return
 
     alerta_nome_vazio = False
@@ -366,7 +366,7 @@ def salvar_jogo_com_enter():
 
     # Atualiza slots e vai de volta ao jogo
     abrir_lista_saves()
-    mudar_estado("jogo")
+    mudar_pagina("jogo")
 
 def sair_e_salvar():
     global alerta_salvo, tempo_alerta_salvo
@@ -378,7 +378,7 @@ def sair_e_salvar():
         if sucesso:
             alerta_salvo = True
             tempo_alerta_salvo = pygame.time.get_ticks()
-            mudar_estado("menu")
+            mudar_pagina("menu")
             return
     iniciar_nome_save()
 
@@ -449,7 +449,7 @@ def substituir_save(alvo):
     tempo_alerta_salvo = pygame.time.get_ticks()
 
 
-    mudar_estado("jogo")
+    mudar_pagina("jogo")
 
 
 def cancelar_substituir():
@@ -473,7 +473,7 @@ def cancelar_substituir():
     modal_slot = None
 
     # 4. Voltar ao jogo
-    mudar_estado("jogo")
+    mudar_pagina("jogo")
 
 # botão cancelar na tela de substituição — declarado global para ser tratado no loop de eventos
 btn_cancel_substituir = Button((SCREEN_W//2 - 100, 500, 200, 50), "Cancelar", BIG, callback=cancelar_substituir)
@@ -483,13 +483,13 @@ btn_cancel_substituir = Button((SCREEN_W//2 - 100, 500, 200, 50), "Cancelar", BI
 # ------------------------------------------------------
 BUTTON_WIDTH, BUTTON_HEIGHT = 220, 60
 
-button_sair_jogo = Button((SCREEN_W - 120, 20, 100, 40), "Sair", FONT, callback=lambda: mudar_estado("sair_confirm"))
+button_sair_jogo = Button((SCREEN_W - 120, 20, 100, 40), "Sair", FONT, callback=lambda: mudar_pagina("sair_confirm"))
 button_sair_sim = Button((SCREEN_W//2 - BUTTON_WIDTH - 20, 300, BUTTON_WIDTH, BUTTON_HEIGHT), "Salvar e Sair", BIG, callback=sair_e_salvar)
-button_sair_nao = Button((SCREEN_W//2 + 20, 300, BUTTON_WIDTH, BUTTON_HEIGHT), "Sair sem Salvar", BIG, callback=lambda: mudar_estado("menu"))
+button_sair_nao = Button((SCREEN_W//2 + 20, 300, BUTTON_WIDTH, BUTTON_HEIGHT), "Sair sem Salvar", BIG, callback=lambda: mudar_pagina("menu"))
 btn_carregar = Button((SCREEN_W // 2 - 120, 290, 240, 50), "Carregar", BIG, callback=abrir_lista_saves)
 
 buttons_menu = [
-    Button((SCREEN_W // 2 - 120, 220, 240, 50), "Jogar (Novo)", BIG, callback=lambda: mudar_estado("selec_bioma")),
+    Button((SCREEN_W // 2 - 120, 220, 240, 50), "Jogar (Novo)", BIG, callback=lambda: mudar_pagina("selec_bioma")),
     btn_carregar,
     Button((SCREEN_W // 2 - 120, 360, 240, 50), "Sair", BIG, callback=lambda: sys.exit()),
     Button((SCREEN_W // 2 - 120, 420, 240, 50), "Tutorial", BIG, callback=lambda: abrir_tutorial_menu()),
@@ -506,13 +506,13 @@ for i, lbl in enumerate(labels, start=1):
     x = start_x + (i - 1) * (button_width + spacing)
     buttons_bioma.append(Button((x, y_biomas, button_width, button_height), lbl, FONT, callback=lambda x=i: escolher_bioma(x)))
 
-button_cancelar_bioma = Button((SCREEN_W // 2 - 100, 500, 200, 50), "Cancelar", BIG, callback=lambda: mudar_estado("menu"))
+button_cancelar_bioma = Button((SCREEN_W // 2 - 100, 500, 200, 50), "Cancelar", BIG, callback=lambda: mudar_pagina("menu"))
 
 button_fim_menu = Button(
     (SCREEN_W//2 - 120, 400, 240, 50),
     "Voltar ao Menu",
     BIG,
-    callback=lambda: mudar_estado("menu")
+    callback=lambda: mudar_pagina("menu")
 )
 
 # ------------------------------------------------------
@@ -574,17 +574,17 @@ def voltar_tutorial():
         tutorial_pagina = 0
 
 def perguntar_tutorial():
-    global pagina, estado_tutorial_origem
-    estado_tutorial_origem = "novo_jogo"
-    mudar_estado("pergunta_tutorial")
+    global pagina, pagina_tutorial_origem
+    pagina_tutorial_origem = "novo_jogo"
+    mudar_pagina("pergunta_tutorial")
 
 def pular_tutorial():
-    global estado_tutorial_origem
-    estado_tutorial_origem = None
-    mudar_estado("jogo")
+    global pagina_tutorial_origem
+    pagina_tutorial_origem = None
+    mudar_pagina("jogo")
 
 def iniciar_tutorial():
-    mudar_estado("tutorial")
+    mudar_pagina("tutorial")
 
 def draw_pergunta_tutorial():
     screen.fill((220, 250, 220))
@@ -610,15 +610,15 @@ btn_voltar = Button(
 def abrir_tutorial_menu():
     global tutorial_origem
     tutorial_origem = "menu"
-    mudar_estado("tutorial")
+    mudar_pagina("tutorial")
 
 def sair_tutorial():
     global tutorial_origem
 
     if tutorial_origem == "menu":
-        mudar_estado("menu")
+        mudar_pagina("menu")
     else:
-        mudar_estado("jogo")
+        mudar_pagina("jogo")
 
 btn_sim = Button((SCREEN_W//2 - 120, 320, 100, 50), "Sim", BIG, callback=iniciar_tutorial)
 btn_nao = Button((SCREEN_W//2 + 20, 320, 100, 50), "Não", BIG, callback=pular_tutorial)
@@ -701,7 +701,7 @@ def draw_confirma_bioma():
             centered_text(screen, linha, FONT, y)
             y += 40
         Button((SCREEN_W//2 - 140, 500, 120, 50), "SIM", BIG, callback=confirmar_bioma_final).draw(screen)
-        Button((SCREEN_W//2 + 20, 500, 120, 50), "NÃO", BIG, callback=lambda: mudar_estado("selec_bioma")).draw(screen)
+        Button((SCREEN_W//2 + 20, 500, 120, 50), "NÃO", BIG, callback=lambda: mudar_pagina("selec_bioma")).draw(screen)
     else:
         centered_text(screen, "Nenhum bioma selecionado", FONT, 180)
 
@@ -997,118 +997,80 @@ def draw_colapso():
 # ------------------------------------------------------
 # LOOP PRINCIPAL
 # ------------------------------------------------------
-
+scroll_historico = 0
 running = True
 
 while running:
-
-    # --------------------------------------------------
-    # CAPTURA DE EVENTOS (mouse, teclado, janela, etc.)
-    # --------------------------------------------------
     for ev in pygame.event.get():
-
-        # Fechou a janela → encerra o jogo
         if ev.type == pygame.QUIT:
             running = False
 
-        # =================================================
-        # DIGITAÇÃO DO NOME DO SAVE
-        # =================================================
+        # DIGITAÇÃO DO SAVE
         if digitando_nome_save and ev.type == pygame.KEYDOWN:
             if ev.key == pygame.K_RETURN:
-                salvar_jogo_com_enter()     # confirma o nome digitado
+                salvar_jogo_com_enter()
             elif ev.key == pygame.K_BACKSPACE:
-                input_nome_save = input_nome_save[:-1]   # apaga caractere
+                input_nome_save = input_nome_save[:-1]
             else:
-                input_nome_save += ev.unicode            # adiciona caractere
-            continue   # impede qualquer outro pagina de interferir
-
-        # =================================================
-        # MODAL ATIVO (bloqueia 100% dos outros eventos)
-        # =================================================
-        if modal_ativo:
-            botoes_modal = draw_modal()     # redesenha modal
-            for b in botoes_modal:
-                b.handle_event(ev)          # só o modal recebe eventos
+                input_nome_save += ev.unicode
             continue
 
-        # =================================================
-        # EVENTOS ESPECÍFICOS POR pagina ATUAL
-        # =================================================
+        # MODAL ATIVO
+        if modal_ativo:
+            botoes_modal = draw_modal()
+            for b in botoes_modal:
+                b.handle_event(ev)
+            continue
+
+        # EVENTOS POR pagina
         if ev.type in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONDOWN, pygame.MOUSEWHEEL):
 
-            # -------------------------
-            # pagina: MENU PRINCIPAL
-            # -------------------------
             if pagina == "menu":
                 for b in buttons_menu:
                     b.handle_event(ev)
 
-            # -------------------------
-            # pagina: PERGUNTA DO TUTORIAL
-            # -------------------------
             elif pagina == "pergunta_tutorial":
                 btn_sim.handle_event(ev)
                 btn_nao.handle_event(ev)
 
-            # -------------------------
-            # pagina: TUTORIAL
-            # -------------------------
             elif pagina == "tutorial":
                 if ev.type in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONDOWN):
                     btn_prox.handle_event(ev)
                     if tutorial_pagina > 0:
                         btn_voltar.handle_event(ev)
 
-            # -------------------------
-            # pagina: SELEÇÃO DE BIOMA
-            # -------------------------
             elif pagina == "selec_bioma":
                 for b in buttons_bioma:
                     b.handle_event(ev)
                 button_cancelar_bioma.handle_event(ev)
 
-            # -------------------------
-            # pagina: CONFIRMAÇÃO DE BIOMA
-            # -------------------------
             elif pagina == "confirma_bioma":
                 if ev.type == pygame.MOUSEBUTTONDOWN:
                     x, y = ev.pos
-                    # Botão SIM
                     if SCREEN_W // 2 - 140 <= x <= SCREEN_W // 2 - 20 and 500 <= y <= 550:
                         confirmar_bioma_final()
-                    # Botão NÃO
                     if SCREEN_W // 2 + 20 <= x <= SCREEN_W // 2 + 140 and 500 <= y <= 550:
-                        mudar_estado("selec_bioma")
+                        mudar_pagina("selec_bioma")
 
-            # -------------------------
-            # pagina: LISTA DE SAVES
-            # -------------------------
             elif pagina == "lista_saves":
                 for s in slots:
                     s.handle_event(ev)
                 button_voltar_saves.handle_event(ev)
 
-            # -------------------------
-            # pagina: JOGO PRINCIPAL
-            # -------------------------
             elif pagina == "jogo":
-                rects = draw_jogo()    # Botões centrais da simulação
+                rects = draw_jogo()
                 button_sair_jogo.handle_event(ev)
 
-                # Clique em ações de jogo
                 if ev.type == pygame.MOUSEBUTTONDOWN:
                     for r, act in rects:
                         if r.collidepoint(ev.pos):
 
-                            # Segurança: se o ecossistema não existe, volta ao início
                             if not ecossistema_ok():
-                                mudar_estado("selec_bioma")
+                                mudar_pagina("selec_bioma")
                                 break
 
                             eco = sistema.ecossistema
 
-                            # As ações do jogo alteram o ecossistema
                             if act == "Plantar Vegetação":
                                 aumento = random.randint(60, 120)
                                 eco.plantas = min(eco.capacidade_plantas, eco.plantas + aumento)
@@ -1136,66 +1098,60 @@ while running:
 
                             elif act == "Histórico":
                                 scroll_historico = 0
-                                button_voltar_saves.callback = lambda: mudar_estado("jogo")
-                                mudar_estado("historico")
+                                button_voltar_saves.callback = lambda: mudar_pagina("jogo")
+                                mudar_pagina("historico")
 
-                            # Após cada ação, verifica se houve fim de jogo
+                            # ---------------------------------------------------------
+                            # VERIFICAR FIM DE JOGO (EDITADO + APAGA SAVE AO TERMINAR)
+                            # ---------------------------------------------------------
                             status_fim = eco.verificar_fim_jogo()
                             if status_fim:
+
+                                # APAGAR SAVE CARREGADO AO TERMINAR O JOGO
+                                if sistema.current_save_file and os.path.exists(sistema.current_save_file):
+                                    try:
+                                        os.remove(sistema.current_save_file)
+                                        print(f"[Save] Save removido: {sistema.current_save_file}")
+                                    except Exception as e:
+                                        print(f"[Erro] Não foi possível remover o save: {e}")
+
+                                    sistema.current_save_file = None
+                                    nome_save_atual = None
+
+                                # MUDAR TELA FINAL
                                 if status_fim == "vitória":
-                                    mudar_estado("fim_vitoria")
+                                    mudar_pagina("fim_vitoria")
                                 elif status_fim == "derrota":
                                     colapso_inicio = pygame.time.get_ticks()
-                                    mudar_estado("colapso")
+                                    mudar_pagina("colapso")
 
-            # -------------------------
-            # pagina: HISTÓRICO
-            # -------------------------
             elif pagina == "historico":
                 button_voltar_saves.handle_event(ev)
                 if ev.type == pygame.MOUSEWHEEL:
-                    scroll_historico += ev.y * 30     # rolagem suave
+                    scroll_historico += ev.y * 30
 
-            # -------------------------
-            # pagina: CONFIRMAÇÃO DE SAÍDA
-            # -------------------------
             elif pagina == "sair_confirm":
                 button_sair_sim.handle_event(ev)
                 button_sair_nao.handle_event(ev)
 
-            # -------------------------
-            # pagina: SUBSTITUIR SAVES
-            # -------------------------
             elif pagina == "substituir_save":
                 for s in slots_sub:
                     s.handle_event(ev)
                 btn_cancel_substituir.handle_event(ev)
 
-            # -------------------------
-            # pagina: TELAS FINAIS
-            # -------------------------
             elif pagina in ("fim_vitoria", "fim_derrota"):
                 button_fim_menu.handle_event(ev)
 
-            # -------------------------
-            # pagina: ANIMAÇÃO DE COLAPSO
-            # -------------------------
             elif pagina == "colapso":
-                pass    # eventos não interferem no colapso
+                pass
 
-    # =====================================================
-    # TIMER DO COLAPSO (3 segundos antes da tela de derrota)
-    # =====================================================
+    # CONTROLE DO TEMPO DO COLAPSO
     if pagina == "colapso" and colapso_inicio:
         if pygame.time.get_ticks() - colapso_inicio >= DURACAO_COLAPSO_MS:
             colapso_inicio = None
-            mudar_estado("fim_derrota")
+            mudar_pagina("fim_derrota")
 
-    # =====================================================
-    # DESENHO DA TELA DE ACORDO COM O pagina ATUAL
-    # (somente UM draw_* por frame)
-    # =====================================================
-
+    # DESENHO DAS TELAS
     if digitando_nome_save:
         draw_input_save()
 
@@ -1204,7 +1160,7 @@ while running:
             draw_lista_saves()
         elif pagina == "substituir_save":
             draw_substituir_save()
-        draw_modal()  # modal sempre fica por cima
+        draw_modal()
 
     elif pagina == "menu":
         draw_menu()
@@ -1245,10 +1201,8 @@ while running:
     elif pagina == "fim_derrota":
         draw_fim_derrota()
 
-    # Atualiza frame e regula FPS
     pygame.display.update()
     clock.tick(60)
 
-# Encerramento seguro
 pygame.quit()
 sys.exit()

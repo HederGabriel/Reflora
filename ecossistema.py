@@ -1,4 +1,3 @@
-import random
 from biomas import (
     configurar_amazonia,
     configurar_cerrado,
@@ -10,8 +9,8 @@ from animais import Herbivoro, Carnivoro
 class Ecossistema:
     def __init__(self, bioma, estado_salvo=None):
         self.bioma = bioma
-        self.mes = 1
-        self.ano = 1
+        self.mes = 12
+        self.ano = 4
 
         # Configuração inicial por bioma + capacidade de plantas
         if bioma == "Amazônia":
