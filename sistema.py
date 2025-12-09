@@ -1,130 +1,201 @@
+import os
+import json
 from ecossistema import Ecossistema
-from interface import exibir_quantitativo, decisao_usuario, capturar_tecla_numerica, aguardar_enter, exibir_historico, \
-    limpar_console
 
-historico_jogo = []
+class SistemaJogo:
 
+    def __init__(self):
+        self.ecossistema = None
+        self.historico_jogo = []
+        self.current_save_file = None          # save atualmente carregado (string)
+        self.save_limit_reached = False        # usado pelo main para abrir tela de substituição
+        self.temp_save_file = "saveJogo.json"  # save temporário (não apague)
 
-def adicionar_ao_historico(ecossistema):
-    historico_jogo.append(
-        f"Ano: {ecossistema.ano}, Mês: {ecossistema.mes}\n"
-        f"Plantas: {ecossistema.plantas}\n"
-        f"Herbívoros: {sum(animal.quantidade for animal in ecossistema.herbivoros.values())}\n"
-        f"Carnívoros: {sum(animal.quantidade for animal in ecossistema.carnivoros.values())}\n"
-    )
+    # -------------------------------------------------
+    # BIOMA
+    # -------------------------------------------------
+    def escolher_bioma(self, i):
+        biomas = ["Amazônia", "Cerrado", "Pantanal", "Caatinga"]
+        return biomas[i - 1]
 
+    def confirmar_bioma(self, bioma):
+        self.ecossistema = Ecossistema(bioma)
+        self.historico_jogo = []
+        self.current_save_file = None   # novo jogo começa sem save associado
 
-def escolher_bioma():
-    while True:
-        limpar_console()
-        print("Escolha um bioma:")
-        print("1. Amazônia")
-        print("2. Cerrado")
-        print("3. Pantanal")
-        print("4. Caatinga")
-        print("Escolha um bioma (1-4): ", end="", flush=True)
-        bioma = capturar_tecla_numerica()
-        if bioma in [1, 2, 3, 4]:
-            return ["Amazônia", "Cerrado", "Pantanal", "Caatinga"][bioma - 1]
-        else:
-            print("\nOpção inválida, tente novamente.")
-            aguardar_enter()
+    # -------------------------------------------------
+    # HISTÓRICO
+    # -------------------------------------------------
+    def adicionar_ao_historico(self):
+        e = self.ecossistema
+        texto = (
+            f"Ano {e.ano}, Mês {e.mes} | "
+            f"Plantas {e.plantas} | "
+            f"Herbívoros {sum(h.quantidade for h in e.herbivoros.values())} | "
+            f"Carnívoros {sum(c.quantidade for c in e.carnivoros.values())}"
+        )
+        self.historico_jogo.append(texto)
 
+    def _listar_saves_validos(self):
+        """Retorna APENAS saves reais do jogo (ignora jsons que não são saves)."""
+        saves = []
+        for f in os.listdir():
+            if not f.endswith(".json"):
+                continue
 
-def confirmar_bioma(bioma):
-    while True:  # Loop até que o usuário escolha 1 ou 2
-        limpar_console()
-        ecossistema = Ecossistema(bioma)
-        print(f"Bioma selecionado: {bioma}")
-        print(f"Quantidade inicial de plantas: {ecossistema.plantas}")
-        print("Herbívoros:")
-        for nome, animal in ecossistema.herbivoros.items():
-            print(f"  {nome}: {animal.quantidade}")
-        print("Carnívoros:")
-        for nome, animal in ecossistema.carnivoros.items():
-            print(f"  {nome}: {animal.quantidade}")
-        print("Confirmar bioma? (1 - Sim, 2 - Não): ", end="", flush=True)
-        confirmar = capturar_tecla_numerica()
+            if f == self.temp_save_file:
+                continue  # ignora o save temporário
 
-        if confirmar in [1, 2]:  # Verifica se a opção é válida
-            return ecossistema if confirmar == 1 else None
-        else:
-            print("\nOpção inválida. Digite 1 para Sim ou 2 para Não.")
-            aguardar_enter("\nPressione Enter para tentar novamente...")
+            try:
+                with open(f, "r", encoding="utf-8") as arq:
+                    data = json.load(arq)
 
+                # Só é save válido se contém TODAS as chaves abaixo:
+                if all(k in data for k in ("bioma", "ano", "mes", "plantas", "herbivoros", "carnivoros")):
+                    saves.append(f)
 
-def verificar_continuacao(ecossistema):
-    if ecossistema.ano % 5 == 0 and ecossistema.mes == 1:
-        print(f"\nO jogo atingiu {ecossistema.ano} anos. Deseja continuar?")
-        print("1. Sim")
-        print("2. Não")
-        print("Escolha uma opção (1-2): ", end="", flush=True)
-        opcao = capturar_tecla_numerica()
-        return opcao == 1
-    return True
+            except:
+                pass  # arquivo inválido → não é save do jogo
 
+        return saves
 
-def iniciar_jogo():
-    while True:
-        bioma = escolher_bioma()
-        ecossistema = confirmar_bioma(bioma)
-        if ecossistema:
-            break
+    # ============================================================
+    # ========================= SALVAR ============================
+    # ============================================================
+    def salvar(self, nome_save=None):
+        """
+        Fluxo:
+        - Se já existe current_save_file  -> sobrescreve
+        - Se NÃO existe:
+            - Se nome_save foi digitado -> tenta criar
+            - Se já houver 3 saves -> cria save temporário "saveJogo.json"
+        """
 
-    while True:
-        exibir_quantitativo(ecossistema)
-        adicionar_ao_historico(ecossistema)
+        # Nenhum jogo carregado
+        if not self.ecossistema:
+            return False
 
-        if all(animal.quantidade == 0 for animal in ecossistema.herbivoros.values()) and \
-                all(animal.quantidade == 0 for animal in ecossistema.carnivoros.values()):
-            print("\nTodos os animais foram extintos. Fim de Jogo.")
-            break
+        # Sincroniza histórico antes de salvar
+        self.historico_jogo = getattr(self.ecossistema, "historico", [])
 
-        if ecossistema.plantas == 0:
-            print("\nTodas as plantas morreram. Fim de Jogo.")
-            break
+        e = self.ecossistema
 
-        if not verificar_continuacao(ecossistema):
-            break
+        # dados do save
+        data = {
+            "bioma": e.bioma,
+            "ano": e.ano,
+            "mes": e.mes,
+            "plantas": e.plantas,
+            "herbivoros": {n: h.quantidade for n, h in e.herbivoros.items()},
+            "carnivoros": {n: c.quantidade for n, c in e.carnivoros.items()},
+            "historico": self.historico_jogo
+        }
 
-        if decisao_usuario(ecossistema):
-            ecossistema.simular_mes()
+        # =====================================================
+        # 1) EXISTE SAVE CARREGADO → SOBRESCREVER
+        # =====================================================
+        if self.current_save_file:
+            destino = self.current_save_file
+            with open(destino, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=4)
 
-    while True:
-        print("\nDeseja ver o histórico do jogo?")
-        print("1. Sim")
-        print("2. Não")
-        print("Escolha uma opção (1-2): ", end="", flush=True)
-        opcao_historico = capturar_tecla_numerica()
-
-        if opcao_historico == 1:
-            exibir_historico(historico_jogo)
-            break
-        elif opcao_historico == 2:
-            break
-        else:
-            print("\nOpção inválida. Digite 1 para Sim ou 2 para Não.")
-            aguardar_enter("\nPressione Enter para tentar novamente...")
-            limpar_console()
-
-
-def verificar_reiniciar():
-    while True:  # Loop até que o usuário escolha uma opção válida
-        limpar_console()
-        print("\nDeseja jogar novamente?")
-        print("1. Sim")
-        print("2. Não")
-        print("Escolha uma opção (1-2): ", end="", flush=True)
-        escolha = capturar_tecla_numerica()
-
-        if escolha == 1:
-            historico_jogo.clear()
-            limpar_console()
+            print(f"[Salvar] Sobrescrito: {destino}")
+            self.save_limit_reached = False
             return True
-        elif escolha == 2:
-            limpar_console()
-            print("Obrigado por jogar! Até a próxima!")
-            exit()
+
+        # =====================================================
+        # 2) CRIANDO NOVO SAVE
+        # =====================================================
+
+        # Filtrar apenas saves do jogo (evita contar configs)
+        saves = self._listar_saves_validos()
+
+        # -----------------------------------------------------
+        # LIMITE DE 3 SAVES -> criar temporário
+        # -----------------------------------------------------
+        if len(saves) >= 3:
+
+            # cria save temporário (NÃO apaga nada do usuário)
+            with open(self.temp_save_file, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=4)
+
+            print("⚠ Limite de 3 saves atingido. Criado save temporário: saveJogo.json")
+            print("⚠ O main deve abrir a tela de substituição.")
+            self.save_limit_reached = True
+            return False
+
+        # -----------------------------------------------------
+        # NOME FOI DIGITADO PELO USUÁRIO
+        # -----------------------------------------------------
+        if nome_save:
+            destino = f"{nome_save}.json"
+
+            # impedir sobrescrever save existente sem intenção
+            if os.path.exists(destino):
+                print("⚠ Esse nome já existe. Usuário deve digitar outro nome.")
+                return False
+
         else:
-            print("\nOpção inválida. Digite 1 para Sim ou 2 para Não.")
-            aguardar_enter("\nPressione Enter para tentar novamente...")
+            # Criar save automático: save1, save2, save3
+            idx = 1
+            while os.path.exists(f"save{idx}.json"):
+                idx += 1
+            destino = f"save{idx}.json"
+
+        # Criar arquivo final
+        with open(destino, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4)
+
+        print(f"[Salvar] Novo save criado: {destino}")
+
+        self.current_save_file = destino
+        self.save_limit_reached = False
+        return True
+
+    # ============================================================
+    # ========================= CARREGAR ==========================
+    # ============================================================
+    def carregar(self, arquivo=None):
+        if not arquivo or not os.path.exists(arquivo):
+            print("Erro ao carregar: arquivo inexistente.")
+            return False
+
+        with open(arquivo, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        # criar ecossistema a partir do save, passando todo o estado salvo
+        self.ecossistema = Ecossistema(bioma=data["bioma"], estado_salvo=data)
+        e = self.ecossistema
+
+        # sincroniza histórico do sistema com o do ecossistema
+        self.historico_jogo = e.historico.copy()
+
+        # marcar como save carregado
+        self.current_save_file = arquivo
+        self.save_limit_reached = False
+
+        print(f"[Carregar] Save carregado: {arquivo}")
+        return True
+
+    # ============================================================
+    # ========================= Histórico ========================
+    # ============================================================
+    def adicionar_ao_historico(self):
+        """Adiciona uma entrada com o estado atual do ecossistema."""
+        if not self.ecossistema:
+            return
+
+        e = self.ecossistema
+        linha = f"Ano {e.ano}, Mês {e.mes} | Plantas {e.plantas} | Herbívoros {sum(h.quantidade for h in e.herbivoros.values())} | Carnívoros {sum(c.quantidade for c in e.carnivoros.values())}"
+
+        if not hasattr(e, "historico"):
+            e.historico = []
+
+        e.historico.append(linha)
+
+    def mostrar_historico(self):
+        if not self.historico_jogo:
+            print("Nenhum histórico ainda.")
+        else:
+            for linha in self.historico_jogo:
+                print(linha)
